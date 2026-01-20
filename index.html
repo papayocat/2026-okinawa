@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Okinawa Travel - 沖繩之旅</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap');
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: #f8faf9; }
+        .teal-primary { background-color: #72b0a8; }
+        .teal-text { color: #5a8e86; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(8px); }
+        .date-chip-active { background-color: #72b0a8; color: white; transform: scale(1.05); }
+        .drag-handle { cursor: grab; }
+        .editable-title:focus { outline: none; border-bottom: 2px dashed #72b0a8; }
+    </style>
+</head>
+<body class="max-w-md mx-auto shadow-2xl min-h-screen relative pb-28">
+    <div id="app">
+        <header class="teal-primary text-white p-6 rounded-b-[40px] shadow-lg sticky top-0 z-40">
+            <div class="flex justify-between items-center mb-6">
+                <div class="flex-1">
+                    <h1 contenteditable="true" @blur="updateTitle" class="text-2xl font-bold tracking-tighter editable-title">{{ pageTitle }}</h1>
+                    <p class="text-[10px] opacity-90 tracking-widest uppercase">2026/02/16 - 02/20</p>
+                </div>
+                <div class="text-right">
+                    <div class="text-3xl font-light leading-none">{{ weather.temp }}°C</div>
+                    <div class="text-[10px] mt-1 opacity-80">那霸 · {{ weather.desc }}</div>
+                </div>
+            </div>
+            
+            <div class="flex space-x-3 overflow-x-auto hide-scrollbar">
+                <div v-for="(day, index) in itinerary" :key="index" 
+                     @click="activeDay = index"
+                     :class="['flex-shrink-0 w-12 h-16 rounded-2xl flex flex-col items-center justify-center transition-all cursor-pointer', 
+                              activeDay === index ? 'date-chip-active shadow-md' : 'bg-white/10']">
+                    <span class="text-[10px] opacity-70">{{ day.week }}</span>
+                    <span class="text-base font-bold">{{ day.date.split('/')[2] }}</span>
+                </div>
+            </div>
+        </header>
+
+        <main class="p-5 space-y-8">
+            <section v-show="activeTab === 'itinerary'" class="space-y-4">
+                <div class="flex justify-between items-center px-1">
+                    <h2 class="teal-text text-xl font-bold">每日行程</h2>
+                    <button @click="addEvent" class="bg-teal-50 teal-text px-3 py-1 rounded-full text-xs font-bold">+ 新增</button>
+                </div>
+                
+                <div id="itinerary-list" class="space-y-4">
+                    <div v-for="(event, idx) in itinerary[activeDay].events" :key="event.id" 
+                         class="glass-card p-5 rounded-[24px] shadow-sm border border-gray-100 relative group">
+                        <div class="drag-handle absolute -left-2 top-1/2 -translate-y-1/2 text-gray-200 p-2">
+                            <i class="fas fa-grip-vertical"></i>
+                        </div>
+                        <div class="ml-4">
+                            <div class="flex justify-between items-start">
+                                <input v-model="event.time" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-50 teal-text border-none w-16 focus:ring-0">
+                                <button @click="deleteEvent(idx)" class="text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity"><i class="fas fa-times-circle"></i></button>
+                            </div>
+                            <input v-model="event.location" class="w-full font-bold text-gray-800 mt-2 border-none focus:ring-0 p-0 text-lg">
+                            <textarea v-model="event.desc" class="w-full text-xs text-gray-500 mt-1 border-none focus:ring-0 p-0 bg-transparent resize-none" rows="2"></textarea>
+                            
+                            <div class="mt-3 bg-gray-50 p-2 rounded-xl flex items-center space-x-2">
+                                <i class="fas fa-train text-[10px] text-teal-400"></i>
+                                <input v-model="event.transport" placeholder="建議交通 (如：單軌電車壺川站)" class="text-[10px] bg-transparent border-none focus:ring-0 w-full text-gray-500">
+                            </div>
+
+                            <div class="flex mt-4 space-x-2">
+                                <a :href="'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(event.location)" target="_blank" class="text-[10px] bg-white teal-text px-3 py-1.5 rounded-lg border border-teal-100 shadow-sm">
+                                    <i class="fas fa-map-marked-alt mr-1"></i>Google Maps
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section v-show="activeTab === 'packing'" class="space-y-4">
+                <div class="flex justify-between items-center">
+                    <h2 class="teal-text text-xl font-bold px-1">行李準備</h2>
+                    <button @click="addPackingCat" class="bg-teal-50 teal-text px-3 py-1 rounded-full text-xs font-bold">+ 分類</button>
+                </div>
+                <div id="packing-cats" class="space-y-4">
+                    <div v-for="(cat, cIdx) in packingList" :key="cat.id" class="bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100">
+                        <div class="p-4 flex justify-between items-center border-b border-gray-50">
+                            <div class="flex items-center">
+                                <div class="cat-drag-handle mr-3 text-gray-200 cursor-grab"><i class="fas fa-bars"></i></div>
+                                <input v-model="cat.name" class="font-bold text-gray-700 border-none focus:ring-0 p-0">
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                <button @click="cat.expanded = !cat.expanded" class="text-gray-300"><i :class="cat.expanded ? 'fa-chevron-up' : 'fa-chevron-down'" class="fas text-xs"></i></button>
+                                <button @click="deletePackingCat(cIdx)" class="text-red-100 hover:text-red-300"><i class="fas fa-trash-alt text-xs"></i></button>
+                            </div>
+                        </div>
+                        <div v-show="cat.expanded" class="p-4 space-y-3 bg-teal-50/20">
+                            <div v-for="(item, iIdx) in cat.items" :key="iIdx" class="flex items-center group">
+                                <input type="checkbox" v-model="item.checked" class="w-4 h-4 rounded-full border-teal-300 text-teal-500 focus:ring-teal-400">
+                                <input v-model="item.name" :class="{'line-through text-gray-400': item.checked}" class="ml-3 text-sm text-gray-600 bg-transparent border-none focus:ring-0 flex-1 p-0">
+                                <button @click="cat.items.splice(iIdx, 1)" class="text-red-200 opacity-0 group-hover:opacity-100"><i class="fas fa-minus-circle"></i></button>
+                            </div>
+                            <input @keyup.enter="addPackingItem(cat, $event)" placeholder="+ 新增物品 (Enter)" class="w-full text-xs p-2 bg-white/50 rounded-lg border-none focus:ring-1 focus:ring-teal-100 outline-none">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section v-show="activeTab === 'memo'" class="space-y-4">
+                <div class="flex justify-between items-center">
+                    <h2 class="teal-text text-xl font-bold px-1">旅行備忘</h2>
+                    <button @click="addMemo" class="bg-teal-50 teal-text px-3 py-1 rounded-full text-xs font-bold">+ 備忘</button>
+                </div>
+                <div id="memo-list" class="space-y-4">
+                    <div v-for="memo in memos" :key="memo.id" 
+                         class="p-5 bg-white rounded-3xl shadow-sm border-l-8 relative" :style="'border-color:' + memo.color">
+                        <div class="memo-drag-handle absolute -left-2 top-1/2 -translate-y-1/2 text-gray-100 p-2"><i class="fas fa-grip-vertical"></i></div>
+                        <div class="flex justify-between items-center">
+                            <input v-model="memo.category" class="text-[10px] font-bold text-gray-400 uppercase tracking-widest border-none focus:ring-0 p-0 w-24">
+                            <div class="flex items-center space-x-2">
+                                <input type="color" v-model="memo.color" class="w-4 h-4 rounded-full border-none p-0 cursor-pointer overflow-hidden">
+                                <button @click="deleteMemo(memo.id)" class="text-gray-200"><i class="fas fa-times text-xs"></i></button>
+                            </div>
+                        </div>
+                        <textarea v-model="memo.content" class="w-full text-sm font-medium text-gray-700 mt-2 border-none focus:ring-0 p-0 bg-transparent resize-none overflow-hidden" rows="2"></textarea>
+                    </div>
+                </div>
+            </section>
+
+            <section v-show="activeTab === 'translate'" class="space-y-4">
+                <h2 class="teal-text text-xl font-bold px-1">即時翻譯</h2>
+                <div class="bg-white p-6 rounded-[32px] shadow-sm border border-gray-100">
+                    <textarea v-model="transInput" placeholder="輸入中文 (如：請問這多少錢？)" 
+                              class="w-full h-32 p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-teal-200 text-gray-700 outline-none resize-none"></textarea>
+                    
+                    <button @click="translateText" 
+                            class="w-full teal-primary text-white py-4 rounded-2xl font-bold shadow-lg mt-4 transition-all active:scale-95">
+                        <i class="fas fa-language mr-2"></i>翻譯成日語
+                    </button>
+
+                    <div v-if="transResult" class="mt-6 p-5 bg-teal-50/50 rounded-2xl border border-teal-100">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-[10px] font-bold teal-text uppercase tracking-widest">日文翻譯</span>
+                            <button @click="speak(transResult)" class="w-12 h-12 bg-white rounded-full shadow-md text-teal-500 flex items-center justify-center active:scale-90 transition-transform">
+                                <i class="fas fa-volume-up text-xl"></i>
+                            </button>
+                        </div>
+                        <p class="text-xl font-bold text-gray-800 leading-relaxed">{{ transResult }}</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <nav class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-sm bg-white/90 backdrop-blur-xl border border-white/20 shadow-2xl rounded-full px-4 py-3 flex justify-around items-center z-50">
+            <button v-for="nav in navs" :key="nav.id" @click="activeTab = nav.id"
+                    :class="['flex flex-col items-center p-2 transition-all', activeTab === nav.id ? 'teal-text scale-110' : 'text-gray-300']">
+                <i :class="nav.icon" class="text-xl"></i>
+                <span class="text-[9px] mt-1 font-bold">{{ nav.label }}</span>
+            </button>
+        </nav>
+    </div>
+
+    <script>
+        const { createApp, ref, onMounted } = Vue;
+
+        createApp({
+            setup() {
+                const pageTitle = ref('OKINAWA 2026');
+                const activeTab = ref('itinerary');
+                const activeDay = ref(0);
+                const transInput = ref('');
+                const transResult = ref('');
+                const weather = ref({ temp: 18, desc: '晴時多雲' });
+
+                const navs = [
+                    { id: 'itinerary', label: '行程', icon: 'fas fa-calendar-alt' },
+                    { id: 'packing', label: '行李', icon: 'fas fa-shopping-bag' },
+                    { id: 'translate', label: '翻譯', icon: 'fas fa-language' },
+                    { id: 'memo', label: '備忘', icon: 'fas fa-pen-nib' }
+                ];
+
+                const itinerary = ref([
+                    { date: '2026/02/16', week: '一', events: [
+                        { id: 1, time: '14:45', location: '桃園機場 T1', desc: '航班 VZ568 [cite: 13, 14]', transport: '機場捷運' },
+                        { id: 2, time: '17:05', location: '沖繩那霸機場', desc: '抵達領取行李 [cite: 18, 20]', transport: '單軌電車往壺川' },
+                        { id: 3, time: '18:30', location: '東急STAY 沖繩那霸', desc: '辦理入住 [cite: 90, 159]', transport: '步行 3 分鐘' }
+                    ]},
+                    { date: '2026/02/17', week: '二', events: [{ id: 4, time: '09:30', location: '國際通', desc: '購物與早餐', transport: '單軌電車' }] },
+                    { date: '2026/02/18', week: '三', events: [{ id: 5, time: '10:00', location: '波上宮', desc: '海邊神社', transport: '巴士' }] },
+                    { date: '2026/02/19', week: '四', events: [{ id: 6, time: '11:00', location: '首里城', desc: '文化遺產', transport: '單軌首里站' }] },
+                    { date: '2026/02/20', week: '五', events: [
+                        { id: 7, time: '11:00', location: '那霸市區', desc: '最後採買', transport: '大眾運輸' },
+                        { id: 8, time: '18:05', location: '那霸機場 T1', desc: '返台航班 VZ569 [cite: 25, 26]', transport: '單軌電車' }
+                    ]}
+                ]);
+
+                const packingList = ref([
+                    { id: 1, name: '證件與資金', expanded: true, items: [
+                        { name: '護照 (效期6個月) [cite: 49]', checked: false },
+                        { name: '住宿券/機票憑證 [cite: 70]', checked: false },
+                        { name: '日幣現金/信用卡', checked: false }
+                    ]},
+                    { id: 2, name: '電子產品', expanded: false, items: [{ name: '行動電源', checked: false }] }
+                ]);
+
+                const memos = ref([
+                    { id: 1, category: '機場', content: '提前 2.5 小時抵達辦理報到 ', color: '#72b0a8' },
+                    { id: 2, category: '飯店', content: '入住 15:00 / 退房 11:00 [cite: 159, 163]', color: '#fbbf24' }
+                ]);
+
+                const translateText = () => {
+                    const dict = { '早安': 'おはよう', '請問多少錢': 'いくらですか', '謝謝': 'ありがとう' };
+                    transResult.value = dict[transInput.value] || transInput.value + " (日文模擬翻譯)";
+                };
+
+                const speak = (text) => {
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    utterance.lang = 'ja-JP';
+                    window.speechSynthesis.speak(utterance);
+                };
+
+                // 編輯功能
+                const updateTitle = (e) => pageTitle.value = e.target.innerText;
+                const addEvent = () => itinerary.value[activeDay.value].events.push({ id: Date.now(), time: '12:00', location: '新景點', desc: '', transport: '' });
+                const deleteEvent = (idx) => itinerary.value[activeDay.value].events.splice(idx, 1);
+                
+                const addPackingCat = () => packingList.value.push({ id: Date.now(), name: '新分類', expanded: true, items: [] });
+                const addPackingItem = (cat, e) => { cat.items.push({ name: e.target.value, checked: false }); e.target.value = ''; };
+                const deletePackingCat = (idx) => packingList.value.splice(idx, 1);
+
+                const addMemo = () => memos.value.push({ id: Date.now(), category: '新分類', content: '備忘內容', color: '#cbd5e1' });
+                const deleteMemo = (id) => memos.value = memos.value.filter(m => m.id !== id);
+
+                onMounted(() => {
+                    Sortable.create(document.getElementById('itinerary-list'), { handle: '.drag-handle', animation: 200 });
+                    Sortable.create(document.getElementById('packing-cats'), { handle: '.cat-drag-handle', animation: 200 });
+                    Sortable.create(document.getElementById('memo-list'), { handle: '.memo-drag-handle', animation: 200 });
+                });
+
+                return {
+                    pageTitle, activeTab, activeDay, navs, itinerary, packingList, memos,
+                    transInput, transResult, weather,
+                    translateText, speak, updateTitle, addEvent, deleteEvent, 
+                    addPackingCat, addPackingItem, deletePackingCat, addMemo, deleteMemo
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
