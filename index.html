@@ -43,7 +43,6 @@
                     </div>
                 </div>
             </div>
-            
             <div class="flex space-x-3 overflow-x-auto hide-scrollbar">
                 <div v-for="(day, index) in itinerary" :key="index" @click="activeDay = index"
                      :class="['flex-shrink-0 w-12 h-16 rounded-2xl flex flex-col items-center justify-center transition-all cursor-pointer', 
@@ -89,14 +88,12 @@
                 <draggable v-model="packingList" item-key="id" handle=".drag-handle" @end="saveData" class="space-y-4">
                     <template #item="{element: cat, index: cIdx}">
                         <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-                            <div class="p-4 flex items-center bg-gray-50/50">
-                                <div class="drag-handle"><i class="fas fa-grip-lines"></i></div>
-                                <div @click="cat.expanded = !cat.expanded" class="flex-1 flex items-center cursor-pointer">
-                                    <input v-model="cat.name" @click.stop @change="saveData" class="font-bold text-gray-700 border-none bg-transparent p-0 focus:ring-0 w-full">
-                                    <i :class="cat.expanded ? 'fa-chevron-up' : 'fa-chevron-down'" class="fas text-[10px] text-gray-300 ml-2"></i>
-                                </div>
-                                <button @click="addPackingItem(cat)" class="text-teal-500 mx-2 text-[10px] font-bold">新增內容</button>
-                                <button @click="packingList.splice(cIdx, 1); saveData()" class="text-red-200 px-1"><i class="fas fa-trash-alt"></i></button>
+                            <div class="p-4 flex items-center bg-gray-50/50 cursor-pointer" @click="cat.expanded = !cat.expanded">
+                                <div class="drag-handle" @click.stop><i class="fas fa-grip-lines"></i></div>
+                                <input v-model="cat.name" @click.stop @change="saveData" class="font-bold text-gray-700 border-none bg-transparent p-0 focus:ring-0 w-full">
+                                <i :class="cat.expanded ? 'fa-chevron-up' : 'fa-chevron-down'" class="fas text-[10px] text-gray-300 ml-2"></i>
+                                <button @click.stop="addPackingItem(cat)" class="text-teal-500 mx-2 text-[10px] font-bold">新增</button>
+                                <button @click.stop="packingList.splice(cIdx, 1); saveData()" class="text-red-200 px-1"><i class="fas fa-trash-alt"></i></button>
                             </div>
                             <div v-show="cat.expanded" class="px-4 pb-4 space-y-3 pt-2">
                                 <div v-for="(item, iIdx) in cat.items" :key="iIdx" class="flex items-center group">
@@ -158,13 +155,14 @@
                 </div>
                 <draggable v-model="memos" item-key="id" handle=".drag-handle" @end="saveData" class="space-y-4">
                     <template #item="{element: memo, index: mIdx}">
-                        <div class="bg-white rounded-3xl shadow-sm border border-l-8" :style="'border-left-color:' + memo.color">
-                            <div class="p-4 flex items-center">
-                                <div class="drag-handle"><i class="fas fa-grip-lines"></i></div>
-                                <input v-model="memo.category" @change="saveData" class="font-bold text-gray-700 text-xs flex-1 border-none focus:ring-0">
-                                <button @click="memos.splice(mIdx, 1); saveData()" class="text-red-100 px-2"><i class="fas fa-trash-alt"></i></button>
+                        <div class="bg-white rounded-3xl shadow-sm border border-l-8 overflow-hidden" :style="'border-left-color:' + memo.color">
+                            <div class="p-4 flex items-center bg-gray-50/30 cursor-pointer" @click="memo.expanded = !memo.expanded">
+                                <div class="drag-handle" @click.stop><i class="fas fa-grip-lines"></i></div>
+                                <input v-model="memo.category" @click.stop @change="saveData" class="font-bold text-gray-700 text-xs flex-1 border-none focus:ring-0 bg-transparent">
+                                <i :class="memo.expanded ? 'fa-chevron-up' : 'fa-chevron-down'" class="fas text-[10px] text-gray-300 mx-2"></i>
+                                <button @click.stop="memos.splice(mIdx, 1); saveData()" class="text-red-100 px-2"><i class="fas fa-trash-alt"></i></button>
                             </div>
-                            <div class="p-4 pt-0 space-y-3">
+                            <div v-show="memo.expanded" class="p-4 pt-0 space-y-3">
                                 <draggable v-model="memo.notes" item-key="id" handle=".sub-drag-handle" @end="saveData">
                                     <template #item="{element: note, index: nIdx}">
                                         <div class="flex items-center py-1">
@@ -174,16 +172,15 @@
                                         </div>
                                     </template>
                                 </draggable>
-
                                 <div class="grid grid-cols-3 gap-2 mt-2" v-if="memo.images && memo.images.length">
                                     <div v-for="(img, iIdx) in memo.images" :key="iIdx" class="relative aspect-square">
-                                        <img :src="img" class="w-full h-full object-cover rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:opacity-80 transition-opacity" @click="openFile(img)">
-                                        <button @click="memo.images.splice(iIdx, 1); saveData()" class="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 text-[8px] flex items-center justify-center shadow-md"><i class="fas fa-times"></i></button>
+                                        <img :src="img" class="w-full h-full object-cover rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:opacity-80 transition-opacity" @click.stop="openFile(img)">
+                                        <button @click.stop="memo.images.splice(iIdx, 1); saveData()" class="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 text-[8px] flex items-center justify-center shadow-md"><i class="fas fa-times"></i></button>
                                     </div>
                                 </div>
                                 <div class="flex space-x-3 pt-2">
-                                    <button @click="memo.notes.push({id: Date.now(), text:''})" class="text-[10px] text-teal-400 font-bold">+ 新增文字</button>
-                                    <label class="text-[10px] text-amber-500 font-bold cursor-pointer">
+                                    <button @click.stop="memo.notes.push({id: Date.now(), text:''})" class="text-[10px] text-teal-400 font-bold">+ 新增文字</button>
+                                    <label class="text-[10px] text-amber-500 font-bold cursor-pointer" @click.stop>
                                         <i class="fas fa-paperclip mr-1"></i>上傳附件
                                         <input type="file" accept="image/*" class="hidden" @change="uploadPhoto($event, memo)">
                                     </label>
@@ -259,27 +256,10 @@
                 };
 
                 const openFile = (url) => { window.open(url, '_blank'); };
-
-                const addEvent = () => {
-                    itinerary.value[activeDay.value].events.push({ id: Date.now(), time: '09:00', location: '', desc: '', transport: '' });
-                    saveData();
-                };
-
-                const addPackingCat = () => {
-                    packingList.value.push({ id: Date.now(), name: '新分類', expanded: true, items: [{ name: '', checked: false }] });
-                    saveData();
-                };
-
-                const addPackingItem = (cat) => {
-                    cat.items.push({ name: '', checked: false });
-                    saveData();
-                };
-
-                const addShopItem = () => {
-                    shoppingList.value.push({ name: '', price: '', date: '', payBy: '現金', done: false });
-                    saveData();
-                };
-
+                const addEvent = () => { itinerary.value[activeDay.value].events.push({ id: Date.now(), time: '09:00', location: '', desc: '', transport: '' }); saveData(); };
+                const addPackingCat = () => { packingList.value.push({ id: Date.now(), name: '新分類', expanded: true, items: [{ name: '', checked: false }] }); saveData(); };
+                const addPackingItem = (cat) => { cat.items.push({ name: '', checked: false }); saveData(); };
+                const addShopItem = () => { shoppingList.value.push({ name: '', price: '', date: '', payBy: '現金', done: false }); saveData(); };
                 const translateText = async () => {
                     if (!transInput.value) return;
                     transResult.value = "翻譯中...";
@@ -289,15 +269,18 @@
                         transResult.value = data.responseData.translatedText;
                     } catch { transResult.value = "翻譯失敗"; }
                 };
+                const speak = (text) => { const msg = new SpeechSynthesisUtterance(text); msg.lang = 'ja-JP'; window.speechSynthesis.speak(msg); };
 
-                const speak = (text) => {
-                    const msg = new SpeechSynthesisUtterance(text);
-                    msg.lang = 'ja-JP';
-                    window.speechSynthesis.speak(msg);
-                };
-
+                // 備忘錄新增函數
                 const addMemo = () => {
-                    memos.value.push({ id: Date.now(), category: '新分類', color: '#72b0a8', notes: [{ id: Date.now(), text: '' }], images: [] });
+                    memos.value.push({ 
+                        id: Date.now(), 
+                        category: '新分類', 
+                        color: '#72b0a8', 
+                        expanded: true, // 確認已包含此屬性
+                        notes: [{ id: Date.now(), text: '' }], 
+                        images: [] 
+                    });
                     saveData();
                 };
 
@@ -322,7 +305,7 @@
                             pageTitle.value = data.pageTitle || 'OKINAWA 2026';
                             itinerary.value = data.itinerary || itinerary.value;
                             packingList.value = data.packingList || [];
-                            memos.value = data.memos || [];
+                            memos.value = (data.memos || []).map(m => ({...m, expanded: m.expanded !== undefined ? m.expanded : true}));
                             shoppingList.value = data.shoppingList || [];
                         }
                     });
