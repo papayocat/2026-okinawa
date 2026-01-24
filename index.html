@@ -3,40 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Okinawa Travel - 沖繩之旅</title>
+    <title>Okinawa 2026</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-storage-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuedraggable@4.1.0/dist/vuedraggable.umd.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap');
-        body { font-family: 'Noto Sans TC', sans-serif; background-color: #f8faf9; }
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: #f4f7f6; -webkit-tap-highlight-color: transparent; }
         .teal-primary { background-color: #72b0a8; }
         .teal-text { color: #5a8e86; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(8px); }
         .date-chip-active { background-color: #72b0a8; color: white; transform: scale(1.05); }
-        .drag-handle { cursor: grab; }
-        .editable-title:focus { outline: none; border-bottom: 2px dashed #72b0a8; }
+        .drag-handle { cursor: grab; padding: 4px; color: #ccc; flex-shrink: 0; }
+        [v-cloak] { display: none; }
     </style>
 </head>
-<body class="max-w-md mx-auto shadow-2xl min-h-screen relative pb-28">
-    <div id="app">
+<body class="max-w-md mx-auto shadow-2xl min-h-screen relative pb-32">
+    <div id="app" v-cloak>
         <header class="teal-primary text-white p-6 rounded-b-[40px] shadow-lg sticky top-0 z-40">
-            <div class="flex justify-between items-center mb-6">
-                <div class="flex-1">
-                    <h1 contenteditable="true" @blur="updateTitle" class="text-2xl font-bold tracking-tighter editable-title">{{ pageTitle }}</h1>
-                    <p class="text-[10px] opacity-90 tracking-widest uppercase">2026/02/16 - 02/20</p>
+            <div class="flex justify-between items-start mb-6">
+                <div class="flex-1 pr-2">
+                    <input v-model="pageTitle" @change="saveData" class="bg-transparent border-none text-2xl font-bold tracking-tighter w-full focus:ring-0 p-0">
+                    <p class="text-[10px] opacity-90 tracking-widest uppercase">2026/02/16 - 02/20 · OKINAWA</p>
                 </div>
-                <div class="text-right">
-                    <div class="text-3xl font-light leading-none">{{ weather.temp }}°C</div>
-                    <div class="text-[10px] mt-1 opacity-80">那霸 · {{ weather.desc }}</div>
+                <div class="flex flex-col items-end space-y-2">
+                    <div class="flex items-center bg-black/10 px-3 py-1.5 rounded-full border border-white/20">
+                        <div :class="isSyncing ? 'bg-yellow-400' : 'bg-green-400'" class="w-1.5 h-1.5 rounded-full mr-2"></div>
+                        <span class="text-[9px] font-bold">{{ isSyncing ? '同步中' : '已連線' }}</span>
+                    </div>
+                    <div class="bg-white/20 px-3 py-1 rounded-full border border-white/10 text-[10px] flex items-center">
+                        <i class="fas fa-cloud-sun mr-1"></i>那霸 21°C
+                    </div>
                 </div>
             </div>
             
             <div class="flex space-x-3 overflow-x-auto hide-scrollbar">
-                <div v-for="(day, index) in itinerary" :key="index" 
-                     @click="activeDay = index"
+                <div v-for="(day, index) in itinerary" :key="index" @click="activeDay = index"
                      :class="['flex-shrink-0 w-12 h-16 rounded-2xl flex flex-col items-center justify-center transition-all cursor-pointer', 
                               activeDay === index ? 'date-chip-active shadow-md' : 'bg-white/10']">
                     <span class="text-[10px] opacity-70">{{ day.week }}</span>
@@ -47,205 +55,278 @@
 
         <main class="p-5 space-y-8">
             <section v-show="activeTab === 'itinerary'" class="space-y-4">
-                <div class="flex justify-between items-center px-1">
-                    <h2 class="teal-text text-xl font-bold">每日行程</h2>
-                    <button @click="addEvent" class="bg-teal-50 teal-text px-3 py-1 rounded-full text-xs font-bold">+ 新增</button>
+                <div class="flex justify-between items-center">
+                    <h2 class="teal-text text-xl font-bold px-1">行程規劃</h2>
+                    <button @click="addEvent" class="text-xs bg-teal-50 teal-text px-3 py-1 rounded-full">+ 新增行程</button>
                 </div>
-                
-                <div id="itinerary-list" class="space-y-4">
-                    <div v-for="(event, idx) in itinerary[activeDay].events" :key="event.id" 
-                         class="glass-card p-5 rounded-[24px] shadow-sm border border-gray-100 relative group">
-                        <div class="drag-handle absolute -left-2 top-1/2 -translate-y-1/2 text-gray-200 p-2">
-                            <i class="fas fa-grip-vertical"></i>
+                <draggable v-model="itinerary[activeDay].events" item-key="id" handle=".drag-handle" @end="saveData" class="space-y-4">
+                    <template #item="{element, index}">
+                        <div class="glass-card p-4 rounded-[24px] shadow-sm border border-gray-100 flex items-start overflow-hidden">
+                            <div class="drag-handle mt-1"><i class="fas fa-grip-lines"></i></div>
+                            <div class="flex-1 min-w-0 px-2 space-y-2">
+                                <div class="flex items-center space-x-2">
+                                    <input v-model="element.time" @change="saveData" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-50 teal-text w-16 border-none text-center focus:ring-0">
+                                    <input v-model="element.location" @change="saveData" placeholder="地點" class="font-bold text-gray-800 text-sm flex-1 border-none p-0 focus:ring-0 truncate">
+                                </div>
+                                <textarea v-model="element.desc" @change="saveData" placeholder="備註描述" rows="1" class="text-xs text-gray-500 w-full border-none p-0 focus:ring-0 resize-none bg-transparent"></textarea>
+                                <div class="bg-teal-50/50 p-2 rounded-lg flex items-center">
+                                    <i class="fas fa-car-side mr-2 text-[10px] text-teal-600"></i>
+                                    <input v-model="element.transport" @change="saveData" placeholder="交通方式" class="text-[10px] text-teal-600 bg-transparent border-none p-0 w-full focus:ring-0">
+                                </div>
+                            </div>
+                            <button @click="itinerary[activeDay].events.splice(index, 1); saveData()" class="text-red-200 p-2"><i class="fas fa-trash-alt"></i></button>
                         </div>
-                        <div class="ml-4">
-                            <div class="flex justify-between items-start">
-                                <input v-model="event.time" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-50 teal-text border-none w-16 focus:ring-0">
-                                <button @click="deleteEvent(idx)" class="text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity"><i class="fas fa-times-circle"></i></button>
-                            </div>
-                            <input v-model="event.location" class="w-full font-bold text-gray-800 mt-2 border-none focus:ring-0 p-0 text-lg">
-                            <textarea v-model="event.desc" class="w-full text-xs text-gray-500 mt-1 border-none focus:ring-0 p-0 bg-transparent resize-none" rows="2"></textarea>
-                            
-                            <div class="mt-3 bg-gray-50 p-2 rounded-xl flex items-center space-x-2">
-                                <i class="fas fa-train text-[10px] text-teal-400"></i>
-                                <input v-model="event.transport" placeholder="建議交通 (如：單軌電車壺川站)" class="text-[10px] bg-transparent border-none focus:ring-0 w-full text-gray-500">
-                            </div>
+                    </template>
+                </draggable>
+            </section>
 
-                            <div class="flex mt-4 space-x-2">
-                                <a :href="'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(event.location)" target="_blank" class="text-[10px] bg-white teal-text px-3 py-1.5 rounded-lg border border-teal-100 shadow-sm">
-                                    <i class="fas fa-map-marked-alt mr-1"></i>Google Maps
-                                </a>
+            <section v-show="activeTab === 'packing'" class="space-y-4">
+                <div class="flex justify-between items-center px-1">
+                    <h2 class="teal-text text-xl font-bold">行李檢查</h2>
+                    <button @click="addPackingCat" class="text-xs bg-teal-50 teal-text px-3 py-1 rounded-full">+ 新增分類</button>
+                </div>
+                <draggable v-model="packingList" item-key="id" handle=".drag-handle" @end="saveData" class="space-y-4">
+                    <template #item="{element: cat, index: cIdx}">
+                        <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+                            <div class="p-4 flex items-center bg-gray-50/50">
+                                <div class="drag-handle"><i class="fas fa-grip-lines"></i></div>
+                                <div @click="cat.expanded = !cat.expanded" class="flex-1 flex items-center cursor-pointer">
+                                    <input v-model="cat.name" @click.stop @change="saveData" class="font-bold text-gray-700 border-none bg-transparent p-0 focus:ring-0 w-full">
+                                    <i :class="cat.expanded ? 'fa-chevron-up' : 'fa-chevron-down'" class="fas text-[10px] text-gray-300 ml-2"></i>
+                                </div>
+                                <button @click="addPackingItem(cat)" class="text-teal-500 mx-2 text-[10px] font-bold">新增內容</button>
+                                <button @click="packingList.splice(cIdx, 1); saveData()" class="text-red-200 px-1"><i class="fas fa-trash-alt"></i></button>
                             </div>
+                            <div v-show="cat.expanded" class="px-4 pb-4 space-y-3 pt-2">
+                                <div v-for="(item, iIdx) in cat.items" :key="iIdx" class="flex items-center group">
+                                    <input type="checkbox" v-model="item.checked" @change="saveData" class="w-4 h-4 rounded-full text-teal-500 focus:ring-0 border-gray-300">
+                                    <input v-model="item.name" @change="saveData" placeholder="物品名稱" class="ml-3 text-sm text-gray-600 border-none flex-1 p-0 focus:ring-0 bg-transparent">
+                                    <button @click="cat.items.splice(iIdx, 1); saveData()" class="text-gray-200 group-hover:text-red-300 px-2"><i class="fas fa-times"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </draggable>
+            </section>
+
+            <section v-show="activeTab === 'shopping'" class="space-y-4">
+                <div class="flex justify-between items-center px-1">
+                    <h2 class="teal-text text-xl font-bold">購物清單</h2>
+                    <button @click="addShopItem" class="bg-teal-50 teal-text px-3 py-1 rounded-full text-xs font-bold shadow-sm">+ 新增商品</button>
+                </div>
+                <div class="space-y-3">
+                    <div v-for="(item, sIdx) in shoppingList" :key="sIdx" class="bg-white p-4 rounded-[24px] shadow-sm border border-gray-100 flex flex-col space-y-2">
+                        <div class="flex items-center space-x-3">
+                            <input type="checkbox" v-model="item.done" @change="saveData" class="rounded-full text-teal-500">
+                            <input v-model="item.name" @change="saveData" placeholder="商品名稱" class="text-sm font-bold border-none p-0 focus:ring-0 flex-1">
+                            <button @click="shoppingList.splice(sIdx, 1); saveData()" class="text-red-200"><i class="fas fa-trash-alt"></i></button>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <div class="flex items-center bg-gray-50 rounded-lg px-2 py-1">
+                                <span class="text-[10px] text-gray-400 mr-1">￥</span>
+                                <input v-model="item.price" @change="saveData" placeholder="金額" class="w-full text-[10px] bg-transparent border-none p-0 focus:ring-0">
+                            </div>
+                            <input type="date" v-model="item.date" @change="saveData" class="text-[10px] bg-gray-50 rounded-lg px-2 py-1 border-none focus:ring-0">
+                            <select v-model="item.payBy" @change="saveData" class="text-[10px] bg-teal-50 teal-text rounded-lg px-2 py-1 border-none focus:ring-0">
+                                <option value="現金">現金</option>
+                                <option value="信用卡">信用卡</option>
+                            </select>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <section v-show="activeTab === 'packing'" class="space-y-4">
-                <div class="flex justify-between items-center">
-                    <h2 class="teal-text text-xl font-bold px-1">行李準備</h2>
-                    <button @click="addPackingCat" class="bg-teal-50 teal-text px-3 py-1 rounded-full text-xs font-bold">+ 分類</button>
-                </div>
-                <div id="packing-cats" class="space-y-4">
-                    <div v-for="(cat, cIdx) in packingList" :key="cat.id" class="bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100">
-                        <div class="p-4 flex justify-between items-center border-b border-gray-50">
-                            <div class="flex items-center">
-                                <div class="cat-drag-handle mr-3 text-gray-200 cursor-grab"><i class="fas fa-bars"></i></div>
-                                <input v-model="cat.name" class="font-bold text-gray-700 border-none focus:ring-0 p-0">
-                            </div>
-                            <div class="flex items-center space-x-3">
-                                <button @click="cat.expanded = !cat.expanded" class="text-gray-300"><i :class="cat.expanded ? 'fa-chevron-up' : 'fa-chevron-down'" class="fas text-xs"></i></button>
-                                <button @click="deletePackingCat(cIdx)" class="text-red-100 hover:text-red-300"><i class="fas fa-trash-alt text-xs"></i></button>
-                            </div>
-                        </div>
-                        <div v-show="cat.expanded" class="p-4 space-y-3 bg-teal-50/20">
-                            <div v-for="(item, iIdx) in cat.items" :key="iIdx" class="flex items-center group">
-                                <input type="checkbox" v-model="item.checked" class="w-4 h-4 rounded-full border-teal-300 text-teal-500 focus:ring-teal-400">
-                                <input v-model="item.name" :class="{'line-through text-gray-400': item.checked}" class="ml-3 text-sm text-gray-600 bg-transparent border-none focus:ring-0 flex-1 p-0">
-                                <button @click="cat.items.splice(iIdx, 1)" class="text-red-200 opacity-0 group-hover:opacity-100"><i class="fas fa-minus-circle"></i></button>
-                            </div>
-                            <input @keyup.enter="addPackingItem(cat, $event)" placeholder="+ 新增物品 (Enter)" class="w-full text-xs p-2 bg-white/50 rounded-lg border-none focus:ring-1 focus:ring-teal-100 outline-none">
-                        </div>
+            <section v-show="activeTab === 'translate'" class="space-y-6">
+                <h2 class="teal-text text-xl font-bold px-1 text-center">中日翻譯</h2>
+                <div class="bg-white p-5 rounded-[32px] shadow-sm space-y-4 border border-gray-100">
+                    <textarea v-model="transInput" placeholder="請輸入中文..." class="w-full h-28 p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-teal-200 text-sm resize-none"></textarea>
+                    <button @click="translateText" class="w-full teal-primary text-white py-4 rounded-2xl font-bold shadow-md active:scale-95 transition-all">
+                        <i class="fas fa-language mr-2"></i>開始翻譯
+                    </button>
+                    <div v-if="transResult" class="p-4 bg-teal-50 rounded-2xl border border-teal-100 relative group">
+                        <p class="text-teal-800 font-medium pr-8">{{ transResult }}</p>
+                        <button @click="speak(transResult)" class="absolute right-3 top-3 text-teal-400 hover:text-teal-600"><i class="fas fa-volume-up"></i></button>
                     </div>
                 </div>
             </section>
 
             <section v-show="activeTab === 'memo'" class="space-y-4">
-                <div class="flex justify-between items-center">
-                    <h2 class="teal-text text-xl font-bold px-1">旅行備忘</h2>
-                    <button @click="addMemo" class="bg-teal-50 teal-text px-3 py-1 rounded-full text-xs font-bold">+ 備忘</button>
+                <div class="flex justify-between items-center px-1">
+                    <h2 class="teal-text text-xl font-bold">重要備忘</h2>
+                    <button @click="addMemo" class="text-xs bg-teal-50 teal-text px-3 py-1 rounded-full">+ 新增分類</button>
                 </div>
-                <div id="memo-list" class="space-y-4">
-                    <div v-for="memo in memos" :key="memo.id" 
-                         class="p-5 bg-white rounded-3xl shadow-sm border-l-8 relative" :style="'border-color:' + memo.color">
-                        <div class="memo-drag-handle absolute -left-2 top-1/2 -translate-y-1/2 text-gray-100 p-2"><i class="fas fa-grip-vertical"></i></div>
-                        <div class="flex justify-between items-center">
-                            <input v-model="memo.category" class="text-[10px] font-bold text-gray-400 uppercase tracking-widest border-none focus:ring-0 p-0 w-24">
-                            <div class="flex items-center space-x-2">
-                                <input type="color" v-model="memo.color" class="w-4 h-4 rounded-full border-none p-0 cursor-pointer overflow-hidden">
-                                <button @click="deleteMemo(memo.id)" class="text-gray-200"><i class="fas fa-times text-xs"></i></button>
+                <draggable v-model="memos" item-key="id" handle=".drag-handle" @end="saveData" class="space-y-4">
+                    <template #item="{element: memo, index: mIdx}">
+                        <div class="bg-white rounded-3xl shadow-sm border border-l-8" :style="'border-left-color:' + memo.color">
+                            <div class="p-4 flex items-center">
+                                <div class="drag-handle"><i class="fas fa-grip-lines"></i></div>
+                                <input v-model="memo.category" @change="saveData" class="font-bold text-gray-700 text-xs flex-1 border-none focus:ring-0">
+                                <button @click="memos.splice(mIdx, 1); saveData()" class="text-red-100 px-2"><i class="fas fa-trash-alt"></i></button>
+                            </div>
+                            <div class="p-4 pt-0 space-y-3">
+                                <div v-for="(note, nIdx) in memo.notes" :key="nIdx" class="flex items-center">
+                                    <textarea v-model="note.text" @change="saveData" rows="1" class="text-sm text-gray-600 bg-transparent border-none flex-1 p-0 focus:ring-0 resize-none"></textarea>
+                                    <button @click="memo.notes.splice(nIdx, 1); saveData()" class="text-red-100 text-[10px] px-2"><i class="fas fa-times"></i></button>
+                                </div>
+                                <div class="grid grid-cols-3 gap-2 mt-2" v-if="memo.images && memo.images.length">
+                                    <div v-for="(img, iIdx) in memo.images" :key="iIdx" class="relative aspect-square">
+                                        <img :src="img" class="w-full h-full object-cover rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:opacity-80 transition-opacity" @click="openFile(img)">
+                                        <button @click="memo.images.splice(iIdx, 1); saveData()" class="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 text-[8px] flex items-center justify-center shadow-md"><i class="fas fa-times"></i></button>
+                                    </div>
+                                </div>
+                                <div class="flex space-x-3 pt-2">
+                                    <button @click="memo.notes.push({text:''})" class="text-[10px] text-teal-400 font-bold">+ 新增文字</button>
+                                    <label class="text-[10px] text-amber-500 font-bold cursor-pointer">
+                                        <i class="fas fa-paperclip mr-1"></i>上傳附件
+                                        <input type="file" accept="image/*" class="hidden" @change="uploadPhoto($event, memo)">
+                                    </label>
+                                </div>
                             </div>
                         </div>
-                        <textarea v-model="memo.content" class="w-full text-sm font-medium text-gray-700 mt-2 border-none focus:ring-0 p-0 bg-transparent resize-none overflow-hidden" rows="2"></textarea>
-                    </div>
-                </div>
-            </section>
-
-            <section v-show="activeTab === 'translate'" class="space-y-4">
-                <h2 class="teal-text text-xl font-bold px-1">即時翻譯</h2>
-                <div class="bg-white p-6 rounded-[32px] shadow-sm border border-gray-100">
-                    <textarea v-model="transInput" placeholder="輸入中文 (如：請問這多少錢？)" 
-                              class="w-full h-32 p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-teal-200 text-gray-700 outline-none resize-none"></textarea>
-                    
-                    <button @click="translateText" 
-                            class="w-full teal-primary text-white py-4 rounded-2xl font-bold shadow-lg mt-4 transition-all active:scale-95">
-                        <i class="fas fa-language mr-2"></i>翻譯成日語
-                    </button>
-
-                    <div v-if="transResult" class="mt-6 p-5 bg-teal-50/50 rounded-2xl border border-teal-100">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="text-[10px] font-bold teal-text uppercase tracking-widest">日文翻譯</span>
-                            <button @click="speak(transResult)" class="w-12 h-12 bg-white rounded-full shadow-md text-teal-500 flex items-center justify-center active:scale-90 transition-transform">
-                                <i class="fas fa-volume-up text-xl"></i>
-                            </button>
-                        </div>
-                        <p class="text-xl font-bold text-gray-800 leading-relaxed">{{ transResult }}</p>
-                    </div>
-                </div>
+                    </template>
+                </draggable>
             </section>
         </main>
 
-        <nav class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-sm bg-white/90 backdrop-blur-xl border border-white/20 shadow-2xl rounded-full px-4 py-3 flex justify-around items-center z-50">
-            <button v-for="nav in navs" :key="nav.id" @click="activeTab = nav.id"
-                    :class="['flex flex-col items-center p-2 transition-all', activeTab === nav.id ? 'teal-text scale-110' : 'text-gray-300']">
-                <i :class="nav.icon" class="text-xl"></i>
-                <span class="text-[9px] mt-1 font-bold">{{ nav.label }}</span>
+        <nav class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[94%] max-w-sm bg-white/90 backdrop-blur-xl border border-white/20 shadow-2xl rounded-full px-2 py-2 flex justify-around items-center z-50">
+            <button v-for="nav in navs" :key="nav.id" @click="activeTab = nav.id" :class="['flex flex-col items-center p-2 transition-all', activeTab === nav.id ? 'teal-text scale-110' : 'text-gray-300']">
+                <i :class="nav.icon" class="text-lg"></i>
+                <span class="text-[8px] mt-1 font-bold">{{ nav.label }}</span>
             </button>
         </nav>
     </div>
 
     <script>
         const { createApp, ref, onMounted } = Vue;
+        const draggable = window.vuedraggable;
 
         createApp({
+            components: { draggable },
             setup() {
+                const isSyncing = ref(false);
                 const pageTitle = ref('OKINAWA 2026');
-                const activeTab = ref('itinerary');
-                const activeDay = ref(0);
+                const itinerary = ref([
+                    { date: '2026/02/16', week: '一', events: [] },
+                    { date: '2026/02/17', week: '二', events: [] },
+                    { date: '2026/02/18', week: '三', events: [] },
+                    { date: '2026/02/19', week: '四', events: [] },
+                    { date: '2026/02/20', week: '五', events: [] }
+                ]);
+                const packingList = ref([]);
+                const memos = ref([]);
+                const shoppingList = ref([]);
                 const transInput = ref('');
                 const transResult = ref('');
-                const weather = ref({ temp: 18, desc: '晴時多雲' });
+                const activeTab = ref('itinerary');
+                const activeDay = ref(0);
 
                 const navs = [
-                    { id: 'itinerary', label: '行程', icon: 'fas fa-calendar-alt' },
-                    { id: 'packing', label: '行李', icon: 'fas fa-shopping-bag' },
+                    { id: 'itinerary', label: '行程', icon: 'fas fa-map-marked-alt' }, 
+                    { id: 'packing', label: '行李', icon: 'fas fa-briefcase' }, 
+                    { id: 'shopping', label: '購物', icon: 'fas fa-shopping-bag' },
                     { id: 'translate', label: '翻譯', icon: 'fas fa-language' },
-                    { id: 'memo', label: '備忘', icon: 'fas fa-pen-nib' }
+                    { id: 'memo', label: '備忘', icon: 'fas fa-sticky-note' }
                 ];
 
-                const itinerary = ref([
-                    { date: '2026/02/16', week: '一', events: [
-                        { id: 1, time: '14:45', location: '桃園機場 T1', desc: '航班 VZ568 [cite: 13, 14]', transport: '機場捷運' },
-                        { id: 2, time: '17:05', location: '沖繩那霸機場', desc: '抵達領取行李 [cite: 18, 20]', transport: '單軌電車往壺川' },
-                        { id: 3, time: '18:30', location: '東急STAY 沖繩那霸', desc: '辦理入住 [cite: 90, 159]', transport: '步行 3 分鐘' }
-                    ]},
-                    { date: '2026/02/17', week: '二', events: [{ id: 4, time: '09:30', location: '國際通', desc: '購物與早餐', transport: '單軌電車' }] },
-                    { date: '2026/02/18', week: '三', events: [{ id: 5, time: '10:00', location: '波上宮', desc: '海邊神社', transport: '巴士' }] },
-                    { date: '2026/02/19', week: '四', events: [{ id: 6, time: '11:00', location: '首里城', desc: '文化遺產', transport: '單軌首里站' }] },
-                    { date: '2026/02/20', week: '五', events: [
-                        { id: 7, time: '11:00', location: '那霸市區', desc: '最後採買', transport: '大眾運輸' },
-                        { id: 8, time: '18:05', location: '那霸機場 T1', desc: '返台航班 VZ569 [cite: 25, 26]', transport: '單軌電車' }
-                    ]}
-                ]);
+                const firebaseConfig = {
+                    apiKey: "AIzaSyB83MLKhhK5LHob8_nkRPc_DrLn3G-qzIc",
+                    authDomain: "trip-a76c2.firebaseapp.com",
+                    databaseURL: "https://trip-a76c2-default-rtdb.firebaseio.com",
+                    projectId: "trip-a76c2",
+                    storageBucket: "trip-a76c2.firebasestorage.app"
+                };
 
-                const packingList = ref([
-                    { id: 1, name: '證件與資金', expanded: true, items: [
-                        { name: '護照 (效期6個月) [cite: 49]', checked: false },
-                        { name: '住宿券/機票憑證 [cite: 70]', checked: false },
-                        { name: '日幣現金/信用卡', checked: false }
-                    ]},
-                    { id: 2, name: '電子產品', expanded: false, items: [{ name: '行動電源', checked: false }] }
-                ]);
+                if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+                const db = firebase.database().ref('okinawa_v2026');
+                const storage = firebase.storage().ref();
 
-                const memos = ref([
-                    { id: 1, category: '機場', content: '提前 2.5 小時抵達辦理報到 ', color: '#72b0a8' },
-                    { id: 2, category: '飯店', content: '入住 15:00 / 退房 11:00 [cite: 159, 163]', color: '#fbbf24' }
-                ]);
+                const saveData = () => {
+                    isSyncing.value = true;
+                    db.set({
+                        pageTitle: pageTitle.value,
+                        itinerary: JSON.parse(JSON.stringify(itinerary.value)),
+                        packingList: JSON.parse(JSON.stringify(packingList.value)),
+                        memos: JSON.parse(JSON.stringify(memos.value)),
+                        shoppingList: JSON.parse(JSON.stringify(shoppingList.value))
+                    }).then(() => setTimeout(() => isSyncing.value = false, 500));
+                };
 
-                const translateText = () => {
-                    const dict = { '早安': 'おはよう', '請問多少錢': 'いくらですか', '謝謝': 'ありがとう' };
-                    transResult.value = dict[transInput.value] || transInput.value + " (日文模擬翻譯)";
+                const openFile = (url) => {
+                    window.open(url, '_blank');
+                };
+
+                const addEvent = () => {
+                    itinerary.value[activeDay.value].events.push({ id: Date.now(), time: '09:00', location: '', desc: '', transport: '' });
+                    saveData();
+                };
+
+                const addPackingCat = () => {
+                    packingList.value.push({ id: Date.now(), name: '新分類', expanded: true, items: [{ name: '', checked: false }] });
+                    saveData();
+                };
+
+                const addPackingItem = (cat) => {
+                    cat.items.push({ name: '', checked: false });
+                    saveData();
+                };
+
+                const addShopItem = () => {
+                    shoppingList.value.push({ name: '', price: '', date: '', payBy: '現金', done: false });
+                    saveData();
+                };
+
+                const translateText = async () => {
+                    if (!transInput.value) return;
+                    transResult.value = "翻譯中...";
+                    try {
+                        const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(transInput.value)}&langpair=zh-TW|ja`);
+                        const data = await res.json();
+                        transResult.value = data.responseData.translatedText;
+                    } catch { transResult.value = "翻譯失敗"; }
                 };
 
                 const speak = (text) => {
-                    const utterance = new SpeechSynthesisUtterance(text);
-                    utterance.lang = 'ja-JP';
-                    window.speechSynthesis.speak(utterance);
+                    const msg = new SpeechSynthesisUtterance(text);
+                    msg.lang = 'ja-JP';
+                    window.speechSynthesis.speak(msg);
                 };
 
-                // 編輯功能
-                const updateTitle = (e) => pageTitle.value = e.target.innerText;
-                const addEvent = () => itinerary.value[activeDay.value].events.push({ id: Date.now(), time: '12:00', location: '新景點', desc: '', transport: '' });
-                const deleteEvent = (idx) => itinerary.value[activeDay.value].events.splice(idx, 1);
-                
-                const addPackingCat = () => packingList.value.push({ id: Date.now(), name: '新分類', expanded: true, items: [] });
-                const addPackingItem = (cat, e) => { cat.items.push({ name: e.target.value, checked: false }); e.target.value = ''; };
-                const deletePackingCat = (idx) => packingList.value.splice(idx, 1);
+                const addMemo = () => {
+                    memos.value.push({ id: Date.now(), category: '新分類', color: '#72b0a8', notes: [{ text: '' }], images: [] });
+                    saveData();
+                };
 
-                const addMemo = () => memos.value.push({ id: Date.now(), category: '新分類', content: '備忘內容', color: '#cbd5e1' });
-                const deleteMemo = (id) => memos.value = memos.value.filter(m => m.id !== id);
+                const uploadPhoto = async (e, memo) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    isSyncing.value = true;
+                    const fileRef = storage.child(`memos/${Date.now()}_${file.name}`);
+                    try {
+                        const snapshot = await fileRef.put(file);
+                        const url = await snapshot.ref.getDownloadURL();
+                        if (!memo.images) memo.images = [];
+                        memo.images.push(url);
+                        saveData();
+                    } catch (err) { alert("上傳失敗"); isSyncing.value = false; }
+                };
 
                 onMounted(() => {
-                    Sortable.create(document.getElementById('itinerary-list'), { handle: '.drag-handle', animation: 200 });
-                    Sortable.create(document.getElementById('packing-cats'), { handle: '.cat-drag-handle', animation: 200 });
-                    Sortable.create(document.getElementById('memo-list'), { handle: '.memo-drag-handle', animation: 200 });
+                    db.on('value', (snapshot) => {
+                        const data = snapshot.val();
+                        if (data) {
+                            pageTitle.value = data.pageTitle || 'OKINAWA 2026';
+                            itinerary.value = data.itinerary || itinerary.value;
+                            packingList.value = data.packingList || [];
+                            memos.value = data.memos || [];
+                            shoppingList.value = data.shoppingList || [];
+                        }
+                    });
                 });
 
                 return {
-                    pageTitle, activeTab, activeDay, navs, itinerary, packingList, memos,
-                    transInput, transResult, weather,
-                    translateText, speak, updateTitle, addEvent, deleteEvent, 
-                    addPackingCat, addPackingItem, deletePackingCat, addMemo, deleteMemo
+                    isSyncing, pageTitle, activeTab, activeDay, navs, 
+                    itinerary, packingList, memos, shoppingList, transInput, transResult,
+                    saveData, openFile, addEvent, addPackingCat, addPackingItem, addShopItem, translateText, speak, addMemo, uploadPhoto
                 };
             }
         }).mount('#app');
