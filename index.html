@@ -21,6 +21,7 @@
         .glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(8px); }
         .date-chip-active { background-color: #72b0a8; color: white; transform: scale(1.05); }
         .drag-handle { cursor: grab; padding: 4px; color: #ccc; flex-shrink: 0; }
+        .sub-drag-handle { cursor: grab; padding: 2px; color: #eee; font-size: 10px; }
         [v-cloak] { display: none; }
     </style>
 </head>
@@ -164,10 +165,16 @@
                                 <button @click="memos.splice(mIdx, 1); saveData()" class="text-red-100 px-2"><i class="fas fa-trash-alt"></i></button>
                             </div>
                             <div class="p-4 pt-0 space-y-3">
-                                <div v-for="(note, nIdx) in memo.notes" :key="nIdx" class="flex items-center">
-                                    <textarea v-model="note.text" @change="saveData" rows="1" class="text-sm text-gray-600 bg-transparent border-none flex-1 p-0 focus:ring-0 resize-none"></textarea>
-                                    <button @click="memo.notes.splice(nIdx, 1); saveData()" class="text-red-100 text-[10px] px-2"><i class="fas fa-times"></i></button>
-                                </div>
+                                <draggable v-model="memo.notes" item-key="id" handle=".sub-drag-handle" @end="saveData">
+                                    <template #item="{element: note, index: nIdx}">
+                                        <div class="flex items-center py-1">
+                                            <div class="sub-drag-handle mr-2"><i class="fas fa-ellipsis-v"></i></div>
+                                            <textarea v-model="note.text" @change="saveData" rows="1" class="text-sm text-gray-600 bg-transparent border-none flex-1 p-0 focus:ring-0 resize-none"></textarea>
+                                            <button @click="memo.notes.splice(nIdx, 1); saveData()" class="text-red-100 text-[10px] px-2"><i class="fas fa-times"></i></button>
+                                        </div>
+                                    </template>
+                                </draggable>
+
                                 <div class="grid grid-cols-3 gap-2 mt-2" v-if="memo.images && memo.images.length">
                                     <div v-for="(img, iIdx) in memo.images" :key="iIdx" class="relative aspect-square">
                                         <img :src="img" class="w-full h-full object-cover rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:opacity-80 transition-opacity" @click="openFile(img)">
@@ -175,7 +182,7 @@
                                     </div>
                                 </div>
                                 <div class="flex space-x-3 pt-2">
-                                    <button @click="memo.notes.push({text:''})" class="text-[10px] text-teal-400 font-bold">+ 新增文字</button>
+                                    <button @click="memo.notes.push({id: Date.now(), text:''})" class="text-[10px] text-teal-400 font-bold">+ 新增文字</button>
                                     <label class="text-[10px] text-amber-500 font-bold cursor-pointer">
                                         <i class="fas fa-paperclip mr-1"></i>上傳附件
                                         <input type="file" accept="image/*" class="hidden" @change="uploadPhoto($event, memo)">
@@ -251,9 +258,7 @@
                     }).then(() => setTimeout(() => isSyncing.value = false, 500));
                 };
 
-                const openFile = (url) => {
-                    window.open(url, '_blank');
-                };
+                const openFile = (url) => { window.open(url, '_blank'); };
 
                 const addEvent = () => {
                     itinerary.value[activeDay.value].events.push({ id: Date.now(), time: '09:00', location: '', desc: '', transport: '' });
@@ -292,7 +297,7 @@
                 };
 
                 const addMemo = () => {
-                    memos.value.push({ id: Date.now(), category: '新分類', color: '#72b0a8', notes: [{ text: '' }], images: [] });
+                    memos.value.push({ id: Date.now(), category: '新分類', color: '#72b0a8', notes: [{ id: Date.now(), text: '' }], images: [] });
                     saveData();
                 };
 
