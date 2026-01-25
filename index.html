@@ -68,12 +68,22 @@
                             <div class="flex-1 min-w-0 px-2 space-y-2">
                                 <div class="flex items-center space-x-2">
                                     <input v-model="element.time" @change="saveData" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-50 teal-text w-16 border-none text-center focus:ring-0">
-                                    <input v-model="element.location" @change="saveData" placeholder="地點" class="font-bold text-gray-800 text-sm flex-1 border-none p-0 focus:ring-0 truncate">
+                                    <div class="flex-1 flex items-center min-w-0 group">
+                                        <input v-model="element.location" @change="saveData" placeholder="地點" class="font-bold text-gray-800 text-sm flex-1 border-none p-0 focus:ring-0 truncate bg-transparent">
+                                        <button v-if="element.location" @click="openMap(element.location)" class="ml-1 text-teal-400 hover:text-teal-600 transition-colors">
+                                            <i class="fas fa-map-marker-alt text-xs"></i>
+                                        </button>
+                                    </div>
                                 </div>
                                 <textarea v-model="element.desc" @change="saveData" placeholder="備註描述" rows="1" class="text-xs text-gray-500 w-full border-none p-0 focus:ring-0 resize-none bg-transparent"></textarea>
                                 <div class="bg-teal-50/50 p-2 rounded-lg flex items-center">
                                     <i class="fas fa-car-side mr-2 text-[10px] text-teal-600"></i>
                                     <input v-model="element.transport" @change="saveData" placeholder="交通方式" class="text-[10px] text-teal-600 bg-transparent border-none p-0 w-full focus:ring-0">
+                                </div>
+                                <div class="pt-1" v-if="element.location">
+                                    <button @click="openGuide(element.location)" class="text-[9px] text-teal-500/70 hover:text-teal-600 flex items-center font-medium">
+                                        <i class="fas fa-info-circle mr-1"></i>景點介紹與評論
+                                    </button>
                                 </div>
                             </div>
                             <button @click="confirmDelete(index, itinerary[activeDay].events)" class="text-red-200 p-2"><i class="fas fa-trash-alt"></i></button>
@@ -221,14 +231,54 @@
                 const isSyncing = ref(false);
                 const pageTitle = ref('OKINAWA 2026');
                 const itinerary = ref([
-                    { date: '2026/02/16', week: '一', events: [] },
-                    { date: '2026/02/17', week: '二', events: [] },
-                    { date: '2026/02/18', week: '三', events: [] },
-                    { date: '2026/02/19', week: '四', events: [] },
-                    { date: '2026/02/20', week: '五', events: [] }
+                    { date: '2026/02/16', week: '一', events: [
+                        { id: 1, time: '12:30', location: '桃園機場 T1', desc: '泰國越捷 VZ568 報到 (14:45起飛)', transport: '捷運/接送' },
+                        { id: 2, time: '17:05', location: '那霸機場 OKA', desc: '抵達、出關、領取行李', transport: '接駁/單軌' },
+                        { id: 3, time: '18:30', location: 'Tokyu Stay Okinawa Naha', desc: '飯店 Check-in (訂單: 2025-12347571)', transport: '單軌壺川站' }
+                    ] },
+                    { date: '2026/02/17', week: '二', events: [{ id: 4, time: '09:00', location: '飯店出發', desc: '那霸市區巡禮', transport: '單軌' }] },
+                    { date: '2026/02/18', week: '三', events: [{ id: 5, time: '09:00', location: '中部行程', desc: '美麗海水族館/美國村', transport: '租車/巴士' }] },
+                    { date: '2026/02/19', week: '四', events: [{ id: 6, time: '10:00', location: '南部行程', desc: '瀨長島/玉泉洞', transport: '租車' }] },
+                    { date: '2026/02/20', week: '五', events: [
+                        { id: 7, time: '11:00', location: '飯店退房', desc: '市區最後採買', transport: '步行' },
+                        { id: 8, time: '16:00', location: '那霸機場 OKA', desc: '泰國越捷 VZ569 (18:05起飛)', transport: '單軌' },
+                        { id: 9, time: '18:45', location: '桃園機場 T1', desc: '返家平安', transport: '接送' }
+                    ] }
                 ]);
-                const packingList = ref([]);
-                const memos = ref([]);
+
+                const packingList = ref([
+                    { id: 101, name: '重要證件', expanded: true, items: [
+                        { name: '護照 (有效期6個月以上)', checked: false },
+                        { name: '日幣現金 / 信用卡', checked: false },
+                        { name: '電子機票/住宿券 (手機截圖)', checked: false },
+                        { name: '駕照正本+日文譯本 (租車用)', checked: false }
+                    ]},
+                    { id: 102, name: '電子設備', expanded: true, items: [
+                        { name: '行動電源 (泰國越捷限制100Wh以下)', checked: false },
+                        { name: '充電頭/萬用轉接/充電線', checked: false },
+                        { name: '網卡/Wi-Fi分享器', checked: false }
+                    ]},
+                    { id: 103, name: '託運行李 (20kg/人)', expanded: true, items: [
+                        { name: '換洗衣物/外套', checked: false },
+                        { name: '盥洗用品/保養品', checked: false }
+                    ]}
+                ]);
+
+                const memos = ref([
+                    { id: 201, category: '交通航班資訊', color: '#72b0a8', expanded: true, notes: [
+                        { id: 301, text: '航空公司：泰國越捷 (Thai Vietjet Air)' },
+                        { id: 302, text: '訂位代號 (PNR)：E4VAHD' },
+                        { id: 303, text: '去程 VZ568：TPE 14:45 → OKA 17:05' },
+                        { id: 304, text: '回程 VZ569：OKA 18:05 → TPE 18:45' }
+                    ], images: [] },
+                    { id: 202, category: '住宿預訂資訊', color: '#5a8e86', expanded: true, notes: [
+                        { id: 305, text: '飯店：Tokyu Stay Okinawa Naha (東急STAY 沖繩那霸)' },
+                        { id: 306, text: '地址：沖縄県那覇市壺川三丁目2番地1' },
+                        { id: 307, text: '訂單編號：2025-12347571' },
+                        { id: 308, text: '入住：2026/02/16 - 退房：02/20 (4晚)' }
+                    ], images: [] }
+                ]);
+
                 const shoppingList = ref([]);
                 const transInput = ref('');
                 const transResult = ref('');
@@ -261,6 +311,10 @@
                         shoppingList: JSON.parse(JSON.stringify(shoppingList.value))
                     }).then(() => setTimeout(() => isSyncing.value = false, 500));
                 };
+
+                // 地圖與導覽功能
+                const openMap = (loc) => { window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc)}`, '_blank'); };
+                const openGuide = (loc) => { window.open(`https://www.google.com/search?q=${encodeURIComponent(loc + ' 景點介紹 評論')}`, '_blank'); };
 
                 const confirmDelete = (index, list) => {
                     if (undoTimer) { clearTimeout(undoTimer); saveData(); }
@@ -343,7 +397,8 @@
 
                 return {
                     isSyncing, pageTitle, activeTab, activeDay, navs, itinerary, packingList, memos, shoppingList, transInput, transResult, showUndo, confirmDelete, undoDelete,
-                    saveData, openFile, addEvent, addPackingCat, addPackingItem, addNoteItem, addShopItem, translateText, openGoogleTranslate, speak, addMemo, uploadPhoto
+                    saveData, openFile, addEvent, addPackingCat, addPackingItem, addNoteItem, addShopItem, translateText, openGoogleTranslate, speak, addMemo, uploadPhoto,
+                    openMap, openGuide
                 };
             }
         }).mount('#app');
