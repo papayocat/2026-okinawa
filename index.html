@@ -165,9 +165,9 @@
                     <button @click="translateText" class="w-full teal-primary text-white py-4 rounded-2xl font-bold shadow-md active:scale-95 transition-all">
                         <i class="fas fa-language mr-2"></i>開始翻譯
                     </button>
-                    <button @click="openGoogleTranslate" class="w-full bg-white border-2 border-teal-500 teal-text py-3 rounded-2xl font-bold flex items-center justify-center space-x-2 active:scale-95 transition-all">
+                    <button @click="openGoogleTranslateApp" class="w-full bg-white border-2 border-teal-500 teal-text py-3 rounded-2xl font-bold flex items-center justify-center space-x-2 active:scale-95 transition-all">
                         <i class="fab fa-google"></i>
-                        <span>開啟 Google 翻譯</span>
+                        <span>開啟 Google 翻譯 App</span>
                     </button>
                     <div v-if="transResult" class="p-4 bg-teal-50 rounded-2xl border border-teal-100 relative group">
                         <p class="text-teal-800 font-medium pr-8">{{ transResult }}</p>
@@ -365,9 +365,19 @@
                     } catch { transResult.value = "翻譯失敗"; }
                 };
 
-                const openGoogleTranslate = () => {
+                // 優化：跳轉至 Google 翻譯 App
+                const openGoogleTranslateApp = () => {
                     const text = encodeURIComponent(transInput.value);
-                    window.open(`https://translate.google.com/?sl=zh-TW&tl=ja&text=${text}&op=translate`, '_blank');
+                    const webUrl = `https://translate.google.com/?sl=zh-TW&tl=ja&text=${text}&op=translate`;
+                    const appUrl = `googletranslate://?sl=zh-TW&tl=ja&text=${text}`;
+                    
+                    // 嘗試喚起 App
+                    window.location.href = appUrl;
+                    
+                    // 如果 500ms 後頁面沒被切換，則開啟網頁版
+                    setTimeout(() => {
+                        window.open(webUrl, '_blank');
+                    }, 500);
                 };
 
                 const speak = (text) => { const msg = new SpeechSynthesisUtterance(text); msg.lang = 'ja-JP'; window.speechSynthesis.speak(msg); };
@@ -422,7 +432,7 @@
 
                 return {
                     isSyncing, pageTitle, activeTab, activeDay, navs, itinerary, packingList, memos, shoppingList, transInput, transResult, showUndo, confirmDelete, undoDelete,
-                    saveData, openFile, addEvent, addPackingCat, addPackingItem, addNoteItem, addShopItem, translateText, openGoogleTranslate, speak, addMemo, uploadPhoto, uploadShopPhoto,
+                    saveData, openFile, addEvent, addPackingCat, addPackingItem, addNoteItem, addShopItem, translateText, openGoogleTranslateApp, speak, addMemo, uploadPhoto, uploadShopPhoto,
                     openMap, openGuide
                 };
             }
