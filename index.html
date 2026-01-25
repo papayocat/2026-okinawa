@@ -142,6 +142,18 @@
                                 <option value="信用卡">信用卡</option>
                             </select>
                         </div>
+                        <div class="grid grid-cols-4 gap-2 mt-1" v-if="item.images && item.images.length">
+                            <div v-for="(img, iIdx) in item.images" :key="iIdx" class="relative aspect-square">
+                                <img :src="img" class="w-full h-full object-cover rounded-lg shadow-sm border border-gray-50 cursor-pointer" @click.stop="openFile(img)">
+                                <button @click.stop="item.images.splice(iIdx, 1); saveData()" class="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-3 h-3 text-[7px] flex items-center justify-center"><i class="fas fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between pt-1">
+                            <label class="text-[9px] text-amber-500 font-bold cursor-pointer flex items-center">
+                                <i class="fas fa-camera mr-1"></i>上傳商品照片
+                                <input type="file" accept="image/*" class="hidden" @change="uploadShopPhoto($event, item)">
+                            </label>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -312,7 +324,6 @@
                     }).then(() => setTimeout(() => isSyncing.value = false, 500));
                 };
 
-                // 地圖與導覽功能
                 const openMap = (loc) => { window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc)}`, '_blank'); };
                 const openGuide = (loc) => { window.open(`https://www.google.com/search?q=${encodeURIComponent(loc + ' 景點介紹 評論')}`, '_blank'); };
 
@@ -342,7 +353,7 @@
 
                 const addPackingCat = () => { packingList.value.push({ id: Date.now(), name: '新分類', expanded: true, items: [{ name: '', checked: false }] }); saveData(); };
                 const addPackingItem = (cat) => { if (!cat.items) cat.items = []; cat.items.push({ name: '', checked: false }); saveData(); };
-                const addShopItem = () => { shoppingList.value.push({ name: '', price: '', date: '', payBy: '現金', done: false }); saveData(); };
+                const addShopItem = () => { shoppingList.value.push({ name: '', price: '', date: '', payBy: '現金', done: false, images: [] }); saveData(); };
                 
                 const translateText = async () => {
                     if (!transInput.value) return;
@@ -382,6 +393,20 @@
                     } catch (err) { alert("上傳失敗"); isSyncing.value = false; }
                 };
 
+                const uploadShopPhoto = async (e, item) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    isSyncing.value = true;
+                    const fileRef = storage.child(`shopping/${Date.now()}_${file.name}`);
+                    try {
+                        const snapshot = await fileRef.put(file);
+                        const url = await snapshot.ref.getDownloadURL();
+                        if (!item.images) item.images = [];
+                        item.images.push(url);
+                        saveData();
+                    } catch (err) { alert("上傳失敗"); isSyncing.value = false; }
+                };
+
                 onMounted(() => {
                     db.on('value', (snapshot) => {
                         const data = snapshot.val();
@@ -390,14 +415,14 @@
                             itinerary.value = data.itinerary || itinerary.value;
                             packingList.value = data.packingList || [];
                             memos.value = (data.memos || []).map(m => ({...m, expanded: m.expanded !== undefined ? m.expanded : true}));
-                            shoppingList.value = data.shoppingList || [];
+                            shoppingList.value = (data.shoppingList || []).map(s => ({...s, images: s.images || []}));
                         }
                     });
                 });
 
                 return {
                     isSyncing, pageTitle, activeTab, activeDay, navs, itinerary, packingList, memos, shoppingList, transInput, transResult, showUndo, confirmDelete, undoDelete,
-                    saveData, openFile, addEvent, addPackingCat, addPackingItem, addNoteItem, addShopItem, translateText, openGoogleTranslate, speak, addMemo, uploadPhoto,
+                    saveData, openFile, addEvent, addPackingCat, addPackingItem, addNoteItem, addShopItem, translateText, openGoogleTranslate, speak, addMemo, uploadPhoto, uploadShopPhoto,
                     openMap, openGuide
                 };
             }
