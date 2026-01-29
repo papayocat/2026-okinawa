@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Okinawa 2026 - v260129-06</title>
+    <title>Okinawa 2026 - v260129-07</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
@@ -25,6 +25,11 @@
         [v-cloak] { display: none; }
         .undo-toast { animation: slideUp 0.3s ease-out; }
         @keyframes slideUp { from { transform: translate(-50%, 100%); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+        /* 展開/收合 動畫 */
+        .collapse-enter-active, .collapse-leave-active { transition: all 0.3s ease; max-height: 1000px; opacity: 1; overflow: hidden; }
+        .collapse-enter-from, .collapse-leave-to { max-height: 0; opacity: 0; }
+        .rotate-icon { transition: transform 0.3s ease; }
+        .rotate-180 { transform: rotate(180deg); }
     </style>
 </head>
 <body class="max-w-md mx-auto shadow-2xl min-h-screen relative pb-32">
@@ -36,7 +41,7 @@
                 </div>
                 <div>
                     <h1 class="text-2xl font-bold text-gray-800">Okinawa 2026</h1>
-                    <p class="text-[10px] text-gray-400 mt-1">Ver. 260129-06</p>
+                    <p class="text-[10px] text-gray-400 mt-1">Ver. 260129-07</p>
                 </div>
                 <div class="space-y-4">
                     <input type="password" v-model="inputPassword" @keyup.enter="handleLogin" placeholder="輸入密碼" class="w-full px-6 py-4 rounded-2xl border-none shadow-sm text-center tracking-widest focus:ring-2 focus:ring-teal-200">
@@ -116,17 +121,22 @@
                             <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
                                 <div class="p-4 flex items-center bg-gray-50/50">
                                     <div class="drag-handle"><i class="fas fa-grip-lines"></i></div>
-                                    <input v-model="cat.name" @change="saveData" class="font-bold text-gray-700 border-none bg-transparent p-0 focus:ring-0 w-full ml-2">
-                                    <button @click="addPackingItem(cat)" class="text-teal-500 mx-2 text-[10px] font-bold flex-shrink-0">新增內容</button>
-                                    <button @click="confirmDelete(cIdx, packingList)" class="text-red-200 px-1"><i class="fas fa-trash-alt"></i></button>
-                                </div>
-                                <div class="px-4 pb-4 space-y-3 pt-2">
-                                    <div v-for="(item, iIdx) in cat.items" :key="iIdx" class="flex items-center">
-                                        <input type="checkbox" v-model="item.checked" @change="saveData" class="w-4 h-4 rounded-full text-teal-500 border-gray-300">
-                                        <input v-model="item.name" @change="saveData" class="ml-3 text-sm text-gray-600 border-none flex-1 p-0 focus:ring-0 bg-transparent">
-                                        <button @click="confirmDelete(iIdx, cat.items)" class="text-gray-200 px-2">×</button>
+                                    <div class="flex items-center flex-1 cursor-pointer ml-2 overflow-hidden" @click="cat.isCollapsed = !cat.isCollapsed">
+                                        <i class="fas fa-chevron-down text-[10px] teal-text rotate-icon mr-2" :class="{'rotate-180': cat.isCollapsed}"></i>
+                                        <input v-model="cat.name" @click.stop @change="saveData" class="font-bold text-gray-700 border-none bg-transparent p-0 focus:ring-0 w-full">
                                     </div>
+                                    <button @click="addPackingItem(cat)" class="text-teal-500 mx-2 text-[10px] font-bold flex-shrink-0">新增內容</button>
+                                    <button @click="confirmDelete(cIdx, packingList)" class="text-red-200 px-1"><i class="fas fa-trash-alt text-xs"></i></button>
                                 </div>
+                                <transition name="collapse">
+                                    <div v-show="!cat.isCollapsed" class="px-4 pb-4 space-y-3 pt-2">
+                                        <div v-for="(item, iIdx) in cat.items" :key="iIdx" class="flex items-center">
+                                            <input type="checkbox" v-model="item.checked" @change="saveData" class="w-4 h-4 rounded-full text-teal-500 border-gray-300">
+                                            <input v-model="item.name" @change="saveData" class="ml-3 text-sm text-gray-600 border-none flex-1 p-0 focus:ring-0 bg-transparent">
+                                            <button @click="confirmDelete(iIdx, cat.items)" class="text-gray-200 px-2">×</button>
+                                        </div>
+                                    </div>
+                                </transition>
                             </div>
                         </template>
                     </draggable>
@@ -182,7 +192,7 @@
                     <h2 class="teal-text text-xl font-bold px-1 text-center">中日翻譯</h2>
                     <div class="bg-white p-5 rounded-[32px] shadow-sm space-y-4 border border-gray-100">
                         <textarea v-model="transInput" placeholder="請輸入中文..." class="w-full h-28 p-4 bg-gray-50 rounded-2xl border-none text-sm resize-none focus:ring-0"></textarea>
-                        <button @click="translateText" class="w-full teal-primary text-white py-4 rounded-2xl font-bold">開始翻譯</button>
+                        <button @click="translateText" class="w-full teal-primary text-white py-4 rounded-2xl font-bold shadow-md">開始翻譯</button>
                         <button @click="openGoogleTranslateApp" class="w-full bg-white border-2 border-teal-500 teal-text py-3 rounded-2xl font-bold flex items-center justify-center space-x-2">
                             <i class="fab fa-google"></i><span>Google 翻譯 App</span>
                         </button>
@@ -203,27 +213,32 @@
                             <div class="bg-white rounded-3xl shadow-sm border border-l-8 overflow-hidden" :style="'border-left-color:' + memo.color">
                                 <div class="p-4 flex items-center bg-gray-50/50">
                                     <div class="drag-handle"><i class="fas fa-grip-lines"></i></div>
-                                    <input v-model="memo.category" @change="saveData" class="font-bold text-gray-700 border-none bg-transparent p-0 focus:ring-0 w-full ml-2">
+                                    <div class="flex items-center flex-1 cursor-pointer ml-2 overflow-hidden" @click="memo.isCollapsed = !memo.isCollapsed">
+                                        <i class="fas fa-chevron-down text-[10px] teal-text rotate-icon mr-2" :class="{'rotate-180': memo.isCollapsed}"></i>
+                                        <input v-model="memo.category" @click.stop @change="saveData" class="font-bold text-gray-700 border-none bg-transparent p-0 focus:ring-0 w-full">
+                                    </div>
                                     <button @click="addNoteItem(memo)" class="text-teal-500 mx-2 text-[10px] font-bold flex-shrink-0">新增內容</button>
-                                    <button @click="confirmDelete(mIdx, memos)" class="text-red-200 px-1"><i class="fas fa-trash-alt"></i></button>
+                                    <button @click="confirmDelete(mIdx, memos)" class="text-red-200 px-1"><i class="fas fa-trash-alt text-xs"></i></button>
                                 </div>
-                                <div class="p-4 pt-0 space-y-3">
-                                    <div v-for="(note, nIdx) in memo.notes" :key="nIdx" class="flex items-start mt-3">
-                                        <div class="w-1.5 h-1.5 rounded-full bg-teal-200 mt-2 mr-3 flex-shrink-0"></div>
-                                        <textarea v-model="note.text" @change="saveData" rows="1" class="text-sm text-gray-600 bg-transparent border-none flex-1 p-0 focus:ring-0 resize-none"></textarea>
-                                        <button @click="confirmDelete(nIdx, memo.notes)" class="text-gray-300 text-[10px] ml-2 mt-1">×</button>
-                                    </div>
-                                    <div class="flex flex-wrap gap-2 mt-2" v-if="memo.images && memo.images.length">
-                                        <div v-for="(img, iIdx) in memo.images" :key="iIdx" class="relative">
-                                            <img :src="img" @click="openFile(img)" class="w-12 h-12 object-cover rounded-xl border">
-                                            <button @click="memo.images.splice(iIdx, 1); saveData()" class="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 text-[8px] flex items-center justify-center">×</button>
+                                <transition name="collapse">
+                                    <div v-show="!memo.isCollapsed" class="p-4 pt-0 space-y-3">
+                                        <div v-for="(note, nIdx) in memo.notes" :key="nIdx" class="flex items-start mt-3">
+                                            <div class="w-1.5 h-1.5 rounded-full bg-teal-200 mt-2 mr-3 flex-shrink-0"></div>
+                                            <textarea v-model="note.text" @change="saveData" rows="1" class="text-sm text-gray-600 bg-transparent border-none flex-1 p-0 focus:ring-0 resize-none"></textarea>
+                                            <button @click="confirmDelete(nIdx, memo.notes)" class="text-gray-300 text-[10px] ml-2 mt-1">×</button>
                                         </div>
+                                        <div class="flex flex-wrap gap-2 mt-2" v-if="memo.images && memo.images.length">
+                                            <div v-for="(img, iIdx) in memo.images" :key="iIdx" class="relative">
+                                                <img :src="img" @click="openFile(img)" class="w-12 h-12 object-cover rounded-xl border">
+                                                <button @click="memo.images.splice(iIdx, 1); saveData()" class="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 text-[8px] flex items-center justify-center">×</button>
+                                            </div>
+                                        </div>
+                                        <label class="text-[10px] text-amber-500 font-bold cursor-pointer flex items-center mt-2">
+                                            <i class="fas fa-paperclip mr-1"></i>上傳附件
+                                            <input type="file" accept="image/*" class="hidden" @change="uploadPhoto($event, memo)">
+                                        </label>
                                     </div>
-                                    <label class="text-[10px] text-amber-500 font-bold cursor-pointer flex items-center mt-2">
-                                        <i class="fas fa-paperclip mr-1"></i>上傳附件
-                                        <input type="file" accept="image/*" class="hidden" @change="uploadPhoto($event, memo)">
-                                    </label>
-                                </div>
+                                </transition>
                             </div>
                         </template>
                     </draggable>
@@ -289,9 +304,9 @@
                             pageTitle.value = data.pageTitle || 'OKINAWA 2026';
                             exchangeRate.value = data.exchangeRate || 0.21;
                             itinerary.value = (data.itinerary || itinerary.value).map(d => ({...d, events: d.events || []}));
-                            packingList.value = (data.packingList || []).map(c => ({...c, items: c.items || []}));
+                            packingList.value = (data.packingList || []).map(c => ({...c, items: c.items || [], isCollapsed: c.isCollapsed || false}));
                             shoppingList.value = (data.shoppingList || []).map(s => ({...s, images: s.images || []}));
-                            memos.value = (data.memos || []).map(m => ({...m, notes: m.notes || [], images: m.images || []}));
+                            memos.value = (data.memos || []).map(m => ({...m, notes: m.notes || [], images: m.images || [], isCollapsed: m.isCollapsed || false}));
                         }
                     });
                 };
@@ -307,11 +322,11 @@
                 };
 
                 const addEvent = () => { itinerary.value[activeDay.value].events.push({ id: Date.now(), time: '09:00', location: '', desc: '', transport: '' }); saveData(); };
-                const addPackingCat = () => { packingList.value.push({ id: Date.now(), name: '新分類', items: [] }); saveData(); };
-                const addPackingItem = (cat) => { cat.items.push({ name: '', checked: false }); saveData(); };
+                const addPackingCat = () => { packingList.value.push({ id: Date.now(), name: '新分類', items: [], isCollapsed: false }); saveData(); };
+                const addPackingItem = (cat) => { cat.items.push({ name: '', checked: false }); cat.isCollapsed = false; saveData(); };
                 const addShopItem = () => { shoppingList.value.push({ name: '', price: null, date: '', payBy: '現金', done: true, images: [] }); saveData(); };
-                const addMemo = () => { memos.value.push({ id: Date.now(), category: '新分類', color: '#72b0a8', notes: [], images: [] }); saveData(); };
-                const addNoteItem = (memo) => { memo.notes.push({ text: '' }); saveData(); };
+                const addMemo = () => { memos.value.push({ id: Date.now(), category: '新分類', color: '#72b0a8', notes: [], images: [], isCollapsed: false }); saveData(); };
+                const addNoteItem = (memo) => { memo.notes.push({ text: '' }); memo.isCollapsed = false; saveData(); };
 
                 const confirmDelete = (index, list) => {
                     lastDeleted.value = { list: list, index: index, data: JSON.parse(JSON.stringify(list[index])) };
