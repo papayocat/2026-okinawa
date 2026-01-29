@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Okinawa 2026 - v260129-02</title>
+    <title>Okinawa 2026 - v260129-04</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
@@ -22,7 +22,6 @@
         .glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(8px); }
         .date-chip-active { background-color: #72b0a8; color: white; transform: scale(1.05); }
         .drag-handle { cursor: grab; padding: 4px; color: #ccc; flex-shrink: 0; }
-        .sub-drag-handle { cursor: grab; padding: 2px; color: #eee; font-size: 10px; }
         [v-cloak] { display: none; }
         .undo-toast { animation: slideUp 0.3s ease-out; }
         @keyframes slideUp { from { transform: translate(-50%, 100%); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
@@ -37,16 +36,12 @@
                 </div>
                 <div>
                     <h1 class="text-2xl font-bold text-gray-800">Okinawa 2026</h1>
-                    <p class="text-[10px] text-gray-400 mt-1">Ver. 260129-02</p>
-                    <p class="text-sm text-gray-400 mt-2">請輸入存取密碼以開啟行程</p>
+                    <p class="text-[10px] text-gray-400 mt-1">Ver. 260129-04</p>
                 </div>
                 <div class="space-y-4">
-                    <input type="password" v-model="inputPassword" @keyup.enter="handleLogin" 
-                           placeholder="輸入密碼" class="w-full px-6 py-4 rounded-2xl border-none shadow-sm focus:ring-2 focus:ring-teal-200 text-center tracking-widest">
-                    <button @click="handleLogin" class="w-full teal-primary text-white py-4 rounded-2xl font-bold shadow-lg active:scale-95 transition-all">
-                        登入
-                    </button>
-                    <p v-if="loginError" class="text-red-400 text-xs font-medium">{{ loginError }}</p>
+                    <input type="password" v-model="inputPassword" @keyup.enter="handleLogin" placeholder="輸入密碼" class="w-full px-6 py-4 rounded-2xl border-none shadow-sm text-center tracking-widest">
+                    <button @click="handleLogin" class="w-full teal-primary text-white py-4 rounded-2xl font-bold active:scale-95 transition-all">登入</button>
+                    <p v-if="loginError" class="text-red-400 text-xs">{{ loginError }}</p>
                 </div>
             </div>
         </div>
@@ -57,33 +52,21 @@
                     <div class="flex-1 pr-2">
                         <input v-model="pageTitle" @change="saveData" class="bg-transparent border-none text-2xl font-bold tracking-tighter w-full focus:ring-0 p-0">
                         <p class="text-[10px] opacity-90 tracking-widest uppercase">2026/02/16 - 02/20 · OKINAWA</p>
-                        
-                        <a href="https://www.google.com/search?q=okinawa+naha+weather" target="_blank" class="flex items-center space-x-3 mt-2 bg-white/10 w-fit px-3 py-1 rounded-full border border-white/5 active:scale-95 transition-transform">
-                            <div class="flex items-center">
-                                <i class="fas fa-cloud-sun mr-1.5 text-[10px]"></i>
-                                <span class="text-[10px] font-medium tracking-widest">18°C - 22°C</span>
-                            </div>
+                        <div class="flex items-center space-x-3 mt-2 bg-white/10 w-fit px-3 py-1 rounded-full border border-white/5">
+                            <div class="flex items-center"><i class="fas fa-cloud-sun mr-1.5 text-[10px]"></i><span class="text-[10px]">18°C - 22°C</span></div>
                             <div class="w-[1px] h-2 bg-white/30"></div>
-                            <div class="flex items-center">
-                                <i class="fas fa-tint mr-1.5 text-[10px]"></i>
-                                <span class="text-[10px] font-medium tracking-widest">降雨 20%</span>
-                            </div>
-                        </a>
+                            <div class="flex items-center"><i class="fas fa-tint mr-1.5 text-[10px]"></i><span class="text-[10px]">20%</span></div>
+                        </div>
                     </div>
                     <div class="flex flex-col items-end space-y-2">
                         <div class="flex items-center bg-black/10 px-3 py-1.5 rounded-full border border-white/20">
                             <div :class="isSyncing ? 'bg-yellow-400' : 'bg-green-400'" class="w-1.5 h-1.5 rounded-full mr-2"></div>
                             <span class="text-[9px] font-bold">{{ isSyncing ? '同步中' : '已保護' }}</span>
                         </div>
-                        <button @click="handleLogout" class="bg-white/10 px-3 py-1 rounded-full text-[10px]">
-                            <i class="fas fa-sign-out-alt"></i>
-                        </button>
                     </div>
                 </div>
                 <div class="flex space-x-3 overflow-x-auto hide-scrollbar">
-                    <div v-for="(day, index) in itinerary" :key="index" @click="activeDay = index"
-                         :class="['flex-shrink-0 w-12 h-16 rounded-2xl flex flex-col items-center justify-center transition-all cursor-pointer', 
-                                  activeDay === index ? 'date-chip-active shadow-md' : 'bg-white/10']">
+                    <div v-for="(day, index) in itinerary" :key="index" @click="activeDay = index" :class="['flex-shrink-0 w-12 h-16 rounded-2xl flex flex-col items-center justify-center transition-all', activeDay === index ? 'date-chip-active shadow-md' : 'bg-white/10']">
                         <span class="text-[10px] opacity-70">{{ day.week }}</span>
                         <span class="text-base font-bold">{{ day.date.split('/')[2] }}</span>
                     </div>
@@ -98,25 +81,44 @@
                     </div>
                     <draggable v-model="itinerary[activeDay].events" item-key="id" handle=".drag-handle" @end="saveData" class="space-y-4">
                         <template #item="{element, index}">
-                            <div class="glass-card p-4 rounded-[24px] shadow-sm border border-gray-100 flex items-start overflow-hidden">
+                            <div class="glass-card p-4 rounded-[24px] shadow-sm border border-gray-100 flex items-start">
                                 <div class="drag-handle mt-1"><i class="fas fa-grip-lines"></i></div>
                                 <div class="flex-1 min-w-0 px-2 space-y-2">
                                     <div class="flex items-center space-x-2">
                                         <input v-model="element.time" @change="saveData" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-50 teal-text w-16 border-none text-center focus:ring-0">
-                                        <div class="flex-1 flex items-center min-w-0 group">
-                                            <input v-model="element.location" @change="saveData" placeholder="地點" class="font-bold text-gray-800 text-sm flex-1 border-none p-0 focus:ring-0 truncate bg-transparent">
-                                            <button v-if="element.location" @click="openMap(element.location)" class="ml-1 text-teal-400 hover:text-teal-600 transition-colors">
-                                                <i class="fas fa-map-marker-alt text-xs"></i>
-                                            </button>
-                                        </div>
+                                        <input v-model="element.location" @change="saveData" placeholder="地點" class="font-bold text-gray-800 text-sm flex-1 border-none p-0 focus:ring-0 truncate bg-transparent">
+                                        <button v-if="element.location" @click="openMap(element.location)" class="text-teal-400"><i class="fas fa-map-marker-alt text-xs"></i></button>
                                     </div>
-                                    <textarea v-model="element.desc" @change="saveData" placeholder="備註描述" rows="1" class="text-xs text-gray-500 w-full border-none p-0 focus:ring-0 resize-none bg-transparent"></textarea>
-                                    <div class="bg-teal-50/50 p-2 rounded-lg flex items-center">
-                                        <i class="fas fa-car-side mr-2 text-[10px] text-teal-600"></i>
-                                        <input v-model="element.transport" @change="saveData" placeholder="交通方式" class="text-[10px] text-teal-600 bg-transparent border-none p-0 w-full focus:ring-0">
-                                    </div>
+                                    <textarea v-model="element.desc" @change="saveData" placeholder="備註描述" rows="1" class="text-xs text-gray-500 w-full border-none p-0 focus:ring-0 bg-transparent"></textarea>
+                                    <button v-if="element.location" @click="openGuide(element.location)" class="text-[9px] text-teal-500/70 flex items-center"><i class="fas fa-info-circle mr-1"></i>景點介紹</button>
                                 </div>
                                 <button @click="confirmDelete(index, itinerary[activeDay].events)" class="text-red-200 p-2"><i class="fas fa-trash-alt"></i></button>
+                            </div>
+                        </template>
+                    </draggable>
+                </section>
+
+                <section v-show="activeTab === 'packing'" class="space-y-4">
+                    <div class="flex justify-between items-center px-1">
+                        <h2 class="teal-text text-xl font-bold">行李檢查</h2>
+                        <button @click="addPackingCat" class="text-xs bg-teal-50 teal-text px-3 py-1 rounded-full shadow-sm">+ 新增分類</button>
+                    </div>
+                    <draggable v-model="packingList" item-key="id" handle=".drag-handle" @end="saveData" class="space-y-4">
+                        <template #item="{element: cat, index: cIdx}">
+                            <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+                                <div class="p-4 flex items-center bg-gray-50/50">
+                                    <div class="drag-handle"><i class="fas fa-grip-lines"></i></div>
+                                    <input v-model="cat.name" @change="saveData" class="font-bold text-gray-700 border-none bg-transparent p-0 focus:ring-0 w-full ml-2">
+                                    <button @click="addPackingItem(cat)" class="text-teal-500 mx-2 text-[10px] font-bold">新增內容</button>
+                                    <button @click="confirmDelete(cIdx, packingList)" class="text-red-200 px-1"><i class="fas fa-trash-alt"></i></button>
+                                </div>
+                                <div class="px-4 pb-4 space-y-3 pt-2">
+                                    <div v-for="(item, iIdx) in cat.items" :key="iIdx" class="flex items-center">
+                                        <input type="checkbox" v-model="item.checked" @change="saveData" class="w-4 h-4 rounded-full text-teal-500 border-gray-300">
+                                        <input v-model="item.name" @change="saveData" class="ml-3 text-sm text-gray-600 border-none flex-1 p-0 focus:ring-0 bg-transparent">
+                                        <button @click="confirmDelete(iIdx, cat.items)" class="text-gray-200 px-2"><i class="fas fa-times"></i></button>
+                                    </div>
+                                </div>
                             </div>
                         </template>
                     </draggable>
@@ -127,10 +129,9 @@
                         <div>
                             <h2 class="teal-text text-xl font-bold">購物清單</h2>
                             <div class="flex items-center mt-1 space-x-1">
-                                <span class="text-[10px] text-amber-600/70 font-bold">1 JPY = </span>
-                                <input type="number" step="0.001" v-model="exchangeRate" @change="saveData" class="w-12 text-[10px] font-bold text-amber-600 bg-amber-50 border-none p-0 focus:ring-0 rounded text-center">
-                                <span class="text-[10px] text-amber-600/70 font-bold">TWD</span>
-                                <a href="https://www.google.com/search?q=JPY+to+TWD" target="_blank" class="text-[9px] text-gray-300 ml-1"><i class="fas fa-external-link-alt"></i></a>
+                                <span class="text-[10px] text-amber-600 font-bold">1 JPY = </span>
+                                <input type="number" step="0.001" v-model="exchangeRate" @change="saveData" class="w-12 text-[10px] font-bold text-amber-600 bg-amber-50 border-none p-0 text-center focus:ring-0">
+                                <span class="text-[10px] text-amber-600 font-bold">TWD / 總計: NT${{totalAmount}}</span>
                             </div>
                         </div>
                         <button @click="addShopItem" class="bg-teal-50 teal-text px-3 py-1 rounded-full text-xs font-bold shadow-sm">+ 新增商品</button>
@@ -139,57 +140,102 @@
                         <div v-for="(item, sIdx) in shoppingList" :key="sIdx" class="bg-white p-4 rounded-[24px] shadow-sm border border-gray-100 flex flex-col space-y-2">
                             <div class="flex items-center space-x-3">
                                 <input type="checkbox" v-model="item.done" @change="saveData" class="rounded-full text-teal-500">
-                                <input v-model="item.name" @change="saveData" placeholder="商品名稱" class="text-sm font-bold border-none p-0 focus:ring-0 flex-1">
+                                <input v-model="item.name" @change="saveData" placeholder="商品名稱" class="text-sm font-bold border-none p-0 focus:ring-0 flex-1 bg-transparent">
                                 <button @click="confirmDelete(sIdx, shoppingList)" class="text-red-200"><i class="fas fa-trash-alt"></i></button>
                             </div>
                             <div class="grid grid-cols-3 gap-2">
                                 <div class="col-span-1">
                                     <div class="flex items-center bg-gray-50 rounded-lg px-2 py-1">
-                                        <span class="text-[10px] text-gray-400 mr-1">￥</span>
-                                        <input type="number" v-model="item.price" @change="saveData" placeholder="金額" class="w-full text-[10px] bg-transparent border-none p-0 focus:ring-0">
+                                        <span class="text-[10px] text-gray-400">￥</span>
+                                        <input type="number" v-model="item.price" @change="saveData" class="w-full text-[10px] bg-transparent border-none p-0 focus:ring-0">
                                     </div>
-                                    <div v-if="item.price" class="text-[9px] text-amber-600 mt-1 font-bold pl-1">
-                                        ≈ NT$ {{ Math.round(item.price * exchangeRate).toLocaleString() }}
-                                    </div>
+                                    <div v-if="item.price" class="text-[9px] text-amber-600 font-bold mt-1">≈ NT$ {{ Math.round(item.price * exchangeRate).toLocaleString() }}</div>
                                 </div>
-                                <input type="date" v-model="item.date" @change="saveData" class="text-[10px] bg-gray-50 rounded-lg px-2 py-1 border-none focus:ring-0 h-fit">
-                                <select v-model="item.payBy" @change="saveData" class="text-[10px] bg-teal-50 teal-text rounded-lg px-2 py-1 border-none focus:ring-0 h-fit">
-                                    <option value="現金">現金</option>
-                                    <option value="信用卡">信用卡</option>
+                                <input type="date" v-model="item.date" @change="saveData" class="text-[10px] bg-gray-50 rounded-lg px-2 border-none focus:ring-0 h-fit">
+                                <select v-model="item.payBy" @change="saveData" class="text-[10px] bg-teal-50 teal-text rounded-lg border-none focus:ring-0 h-fit">
+                                    <option value="現金">現金</option><option value="信用卡">信用卡</option>
                                 </select>
                             </div>
-                            <div class="flex items-center justify-between pt-1">
-                                <label class="text-[9px] text-amber-500 font-bold cursor-pointer flex items-center">
-                                    <i class="fas fa-camera mr-1"></i>上傳照片
-                                    <input type="file" accept="image/*" class="hidden" @change="uploadShopPhoto($event, item)">
-                                </label>
-                                <div v-if="item.images && item.images.length" class="flex -space-x-2">
-                                    <img v-for="(img, iIdx) in item.images" :key="iIdx" :src="img" @click="openFile(img)" class="w-6 h-6 rounded-full border-2 border-white object-cover">
+                            <div class="flex flex-wrap gap-2 mt-1" v-if="item.images && item.images.length">
+                                <div v-for="(img, iIdx) in item.images" :key="iIdx" class="relative">
+                                    <img :src="img" @click="openFile(img)" class="w-10 h-10 object-cover rounded-lg border border-gray-100">
+                                    <button @click="item.images.splice(iIdx, 1); saveData()" class="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-3 h-3 text-[7px] flex items-center justify-center">×</button>
                                 </div>
                             </div>
+                            <label class="text-[9px] text-amber-500 font-bold cursor-pointer flex items-center">
+                                <i class="fas fa-camera mr-1"></i>上傳照片
+                                <input type="file" accept="image/*" class="hidden" @change="uploadPhoto($event, item)">
+                            </label>
                         </div>
                     </div>
                 </section>
-                
-                <section v-show="activeTab === 'packing'" class="space-y-4">
-                    </section>
+
                 <section v-show="activeTab === 'translate'" class="space-y-6">
-                    </section>
+                    <h2 class="teal-text text-xl font-bold px-1 text-center">中日翻譯</h2>
+                    <div class="bg-white p-5 rounded-[32px] shadow-sm space-y-4 border border-gray-100">
+                        <textarea v-model="transInput" placeholder="請輸入中文..." class="w-full h-28 p-4 bg-gray-50 rounded-2xl border-none text-sm resize-none focus:ring-0"></textarea>
+                        <button @click="translateText" class="w-full teal-primary text-white py-4 rounded-2xl font-bold shadow-md">開始翻譯</button>
+                        <button @click="openGoogleTranslateApp" class="w-full bg-white border-2 border-teal-500 teal-text py-3 rounded-2xl font-bold flex items-center justify-center space-x-2">
+                            <i class="fab fa-google"></i><span>開啟 Google 翻譯 App</span>
+                        </button>
+                        <div v-if="transResult" class="p-4 bg-teal-50 rounded-2xl relative">
+                            <p class="text-teal-800 font-medium pr-8">{{ transResult }}</p>
+                            <button @click="speak(transResult)" class="absolute right-3 top-3 text-teal-400"><i class="fas fa-volume-up"></i></button>
+                        </div>
+                    </div>
+                </section>
+
                 <section v-show="activeTab === 'memo'" class="space-y-4">
-                    </section>
+                    <div class="flex justify-between items-center px-1">
+                        <h2 class="teal-text text-xl font-bold">重要備忘</h2>
+                        <button @click="addMemo" class="text-xs bg-teal-50 teal-text px-3 py-1 rounded-full shadow-sm">+ 新增分類</button>
+                    </div>
+                    <draggable v-model="memos" item-key="id" handle=".drag-handle" @end="saveData" class="space-y-4">
+                        <template #item="{element: memo, index: mIdx}">
+                            <div class="bg-white rounded-3xl shadow-sm border border-l-8 overflow-hidden" :style="'border-left-color:' + memo.color">
+                                <div class="p-4 flex items-center bg-gray-50/30">
+                                    <div class="drag-handle"><i class="fas fa-grip-lines"></i></div>
+                                    <input v-model="memo.category" @change="saveData" class="font-bold text-gray-700 text-xs flex-1 border-none focus:ring-0 bg-transparent ml-2">
+                                    <button @click="addNoteItem(memo)" class="text-teal-500 mx-2 text-[10px] font-bold">新增內容</button>
+                                    <button @click="confirmDelete(mIdx, memos)" class="text-red-100 px-2"><i class="fas fa-trash-alt"></i></button>
+                                </div>
+                                <div class="p-4 pt-0 space-y-3">
+                                    <div v-for="(note, nIdx) in memo.notes" :key="nIdx" class="flex items-center">
+                                        <textarea v-model="note.text" @change="saveData" rows="1" class="text-sm text-gray-600 bg-transparent border-none flex-1 p-0 focus:ring-0 resize-none"></textarea>
+                                        <button @click="confirmDelete(nIdx, memo.notes)" class="text-red-100 text-[10px] px-2">×</button>
+                                    </div>
+                                    <div class="flex flex-wrap gap-2 mt-2" v-if="memo.images && memo.images.length">
+                                        <div v-for="(img, iIdx) in memo.images" :key="iIdx" class="relative">
+                                            <img :src="img" @click="openFile(img)" class="w-12 h-12 object-cover rounded-xl border">
+                                            <button @click="memo.images.splice(iIdx, 1); saveData()" class="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 text-[8px] flex items-center justify-center">×</button>
+                                        </div>
+                                    </div>
+                                    <label class="text-[10px] text-amber-500 font-bold cursor-pointer flex items-center">
+                                        <i class="fas fa-paperclip mr-1"></i>上傳附件
+                                        <input type="file" accept="image/*" class="hidden" @change="uploadPhoto($event, memo)">
+                                    </label>
+                                </div>
+                            </div>
+                        </template>
+                    </draggable>
+                </section>
             </main>
+
+            <div v-if="showUndo" class="fixed bottom-24 left-1/2 -translate-x-1/2 w-[90%] bg-gray-800 text-white px-5 py-4 rounded-2xl shadow-2xl flex justify-between items-center z-[60] undo-toast">
+                <span class="text-sm">內容已刪除</span>
+                <button @click="undoDelete" class="teal-text font-bold text-sm bg-white px-4 py-1.5 rounded-full shadow-lg">復原</button>
+            </div>
 
             <nav class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[94%] max-w-sm bg-white/90 backdrop-blur-xl border border-white/20 shadow-2xl rounded-full px-2 py-2 flex justify-around items-center z-50">
                 <button v-for="nav in navs" :key="nav.id" @click="activeTab = nav.id" :class="['flex flex-col items-center p-2 transition-all', activeTab === nav.id ? 'teal-text scale-110' : 'text-gray-300']">
-                    <i :class="nav.icon" class="text-lg"></i>
-                    <span class="text-[8px] mt-1 font-bold">{{ nav.label }}</span>
+                    <i :class="nav.icon" class="text-lg"></i><span class="text-[8px] mt-1 font-bold">{{ nav.label }}</span>
                 </button>
             </nav>
         </template>
     </div>
 
     <script>
-        const { createApp, ref, onMounted } = Vue;
+        const { createApp, ref, computed, onMounted } = Vue;
         const draggable = window.vuedraggable;
         const CORRECT_PASSWORD = '0704'; 
 
@@ -201,15 +247,8 @@
                 const loginError = ref('');
                 const isSyncing = ref(false);
                 const pageTitle = ref('OKINAWA 2026');
-                const exchangeRate = ref(0.21); // 這是可變動的響應式匯率
-                
-                const itinerary = ref([
-                    { date: '2026/02/16', week: '一', events: [] },
-                    { date: '2026/02/17', week: '二', events: [] },
-                    { date: '2026/02/18', week: '三', events: [] },
-                    { date: '2026/02/19', week: '四', events: [] },
-                    { date: '2026/02/20', week: '五', events: [] }
-                ]);
+                const exchangeRate = ref(0.21);
+                const itinerary = ref([{date:'2026/02/16',week:'一',events:[]},{date:'2026/02/17',week:'二',events:[]},{date:'2026/02/18',week:'三',events:[]},{date:'2026/02/19',week:'四',events:[]},{date:'2026/02/20',week:'五',events:[]}]);
                 const packingList = ref([]);
                 const memos = ref([]);
                 const shoppingList = ref([]);
@@ -221,33 +260,16 @@
                 const lastDeleted = ref(null);
                 let undoTimer = null;
 
-                const navs = [
-                    { id: 'itinerary', label: '行程', icon: 'fas fa-map-marked-alt' }, 
-                    { id: 'packing', label: '行李', icon: 'fas fa-briefcase' }, 
-                    { id: 'shopping', label: '購物', icon: 'fas fa-shopping-bag' },
-                    { id: 'translate', label: '翻譯', icon: 'fas fa-language' },
-                    { id: 'memo', label: '備忘', icon: 'fas fa-sticky-note' }
-                ];
+                const navs = [{id:'itinerary',label:'行程',icon:'fas fa-map-marked-alt'},{id:'packing',label:'行李',icon:'fas fa-briefcase'},{id:'shopping',label:'購物',icon:'fas fa-shopping-bag'},{id:'translate',label:'翻譯',icon:'fas fa-language'},{id:'memo',label:'備忘',icon:'fas fa-sticky-note'}];
 
-                const firebaseConfig = { 
-                    apiKey: "AIzaSyB83MLKhhK5LHob8_nkRPc_DrLn3G-qzIc", 
-                    authDomain: "trip-a76c2.firebaseapp.com", 
-                    databaseURL: "https://trip-a76c2-default-rtdb.firebaseio.com", 
-                    projectId: "trip-a76c2", 
-                    storageBucket: "trip-a76c2.firebasestorage.app" 
-                };
+                const firebaseConfig = { apiKey: "AIzaSyB83MLKhhK5LHob8_nkRPc_DrLn3G-qzIc", authDomain: "trip-a76c2.firebaseapp.com", databaseURL: "https://trip-a76c2-default-rtdb.firebaseio.com", projectId: "trip-a76c2", storageBucket: "trip-a76c2.firebasestorage.app" };
                 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
                 const db = firebase.database().ref('okinawa_v2026');
                 const storage = firebase.storage().ref();
-                const auth = firebase.auth();
 
                 const handleLogin = async () => {
                     if (inputPassword.value === CORRECT_PASSWORD) {
-                        try {
-                            await auth.signInAnonymously();
-                            isAuthenticated.value = true;
-                            initDataListener();
-                        } catch (e) { loginError.value = "驗證失敗"; }
+                        try { await firebase.auth().signInAnonymously(); isAuthenticated.value = true; initDataListener(); } catch (e) { loginError.value = "連線失敗"; }
                     } else { loginError.value = "密碼錯誤"; }
                 };
 
@@ -256,58 +278,78 @@
                         const data = snapshot.val();
                         if (data && !undoTimer) {
                             pageTitle.value = data.pageTitle || 'OKINAWA 2026';
-                            exchangeRate.value = data.exchangeRate || 0.21; // 從資料庫讀取匯率
+                            exchangeRate.value = data.exchangeRate || 0.21;
                             itinerary.value = data.itinerary || itinerary.value;
-                            packingList.value = data.packingList || [];
-                            memos.value = data.memos || [];
-                            shoppingList.value = data.shoppingList || [];
+                            packingList.value = (data.packingList || []).map(c => ({...c, items: c.items || []}));
+                            shoppingList.value = (data.shoppingList || []).map(s => ({...s, images: s.images || []}));
+                            memos.value = (data.memos || []).map(m => ({...m, notes: m.notes || [], images: m.images || []}));
                         }
                     });
                 };
 
+                const totalAmount = computed(() => {
+                    return Math.round(shoppingList.value.reduce((acc, item) => item.done && item.price ? acc + (item.price * exchangeRate.value) : acc, 0)).toLocaleString();
+                });
+
                 const saveData = () => {
                     if (!isAuthenticated.value) return;
                     isSyncing.value = true;
-                    db.set({
-                        pageTitle: pageTitle.value,
-                        exchangeRate: exchangeRate.value, // 儲存匯率
-                        itinerary: JSON.parse(JSON.stringify(itinerary.value)),
-                        packingList: JSON.parse(JSON.stringify(packingList.value)),
-                        memos: JSON.parse(JSON.stringify(memos.value)),
-                        shoppingList: JSON.parse(JSON.stringify(shoppingList.value))
-                    }).then(() => setTimeout(() => isSyncing.value = false, 500));
+                    db.set({ pageTitle: pageTitle.value, exchangeRate: exchangeRate.value, itinerary: JSON.parse(JSON.stringify(itinerary.value)), packingList: JSON.parse(JSON.stringify(packingList.value)), memos: JSON.parse(JSON.stringify(memos.value)), shoppingList: JSON.parse(JSON.stringify(shoppingList.value)) }).then(() => setTimeout(() => isSyncing.value = false, 500));
                 };
 
-                const addShopItem = () => { shoppingList.value.push({ name: '', price: null, date: '', payBy: '現金', done: false, images: [] }); saveData(); };
+                // 功能函數
+                const addEvent = () => { itinerary.value[activeDay.value].events.push({ id: Date.now(), time: '09:00', location: '', desc: '' }); saveData(); };
+                const addPackingCat = () => { packingList.value.push({ id: Date.now(), name: '新分類', items: [] }); saveData(); };
+                const addPackingItem = (cat) => { cat.items.push({ name: '', checked: false }); saveData(); };
+                const addShopItem = () => { shoppingList.value.push({ name: '', price: null, date: '', payBy: '現金', done: true, images: [] }); saveData(); };
+                const addMemo = () => { memos.value.push({ id: Date.now(), category: '新分類', color: '#72b0a8', notes: [], images: [] }); saveData(); };
+                const addNoteItem = (memo) => { memo.notes.push({ text: '' }); saveData(); };
+
                 const confirmDelete = (index, list) => {
                     lastDeleted.value = { list: list, index: index, data: JSON.parse(JSON.stringify(list[index])) };
                     list.splice(index, 1);
                     showUndo.value = true;
+                    if (undoTimer) clearTimeout(undoTimer);
                     undoTimer = setTimeout(() => { saveData(); showUndo.value = false; undoTimer = null; }, 5000);
+                };
+
+                const undoDelete = () => {
+                    if (lastDeleted.value) { lastDeleted.value.list.splice(lastDeleted.value.index, 0, lastDeleted.value.data); showUndo.value = false; lastDeleted.value = null; if (undoTimer) {clearTimeout(undoTimer); undoTimer = null;} }
                 };
 
                 const uploadPhoto = async (e, target) => {
                     const file = e.target.files[0];
                     if (!file) return;
+                    isSyncing.value = true;
                     const fileRef = storage.child(`uploads/${Date.now()}_${file.name}`);
-                    const snapshot = await fileRef.put(file);
-                    const url = await snapshot.ref.getDownloadURL();
-                    if (!target.images) target.images = [];
-                    target.images.push(url);
-                    saveData();
+                    try {
+                        const snapshot = await fileRef.put(file);
+                        const url = await snapshot.ref.getDownloadURL();
+                        if (!target.images) target.images = [];
+                        target.images.push(url);
+                        saveData();
+                    } catch (err) { alert("上傳失敗"); isSyncing.value = false; }
                 };
 
-                const uploadShopPhoto = (e, item) => uploadPhoto(e, item);
+                const translateText = async () => {
+                    if (!transInput.value) return;
+                    transResult.value = "翻譯中...";
+                    try {
+                        const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(transInput.value)}&langpair=zh-TW|ja`);
+                        const data = await res.json();
+                        transResult.value = data.responseData.translatedText;
+                    } catch { transResult.value = "翻譯失敗"; }
+                };
+
+                const openGoogleTranslateApp = () => window.open(`https://translate.google.com/?sl=zh-TW&tl=ja&text=${encodeURIComponent(transInput.value)}&op=translate`, '_blank');
+                const speak = (text) => { const msg = new SpeechSynthesisUtterance(text); msg.lang = 'ja-JP'; window.speechSynthesis.speak(msg); };
+                const openMap = (loc) => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc)}`, '_blank');
+                const openGuide = (loc) => window.open(`https://www.google.com/search?q=${encodeURIComponent(loc + ' 介紹')}`, '_blank');
                 const openFile = (url) => window.open(url, '_blank');
 
-                onMounted(() => {
-                    if (localStorage.getItem('trip_auth') === 'true') handleLogin();
-                });
+                onMounted(() => { firebase.auth().onAuthStateChanged((user) => { if (user) { isAuthenticated.value = true; initDataListener(); } }); });
 
-                return {
-                    isAuthenticated, inputPassword, loginError, isSyncing, pageTitle, exchangeRate, activeTab, activeDay, navs, itinerary, packingList, memos, shoppingList, transInput, transResult, showUndo,
-                    handleLogin, saveData, addShopItem, confirmDelete, uploadShopPhoto, openFile
-                };
+                return { isAuthenticated, inputPassword, loginError, isSyncing, pageTitle, exchangeRate, activeTab, activeDay, navs, itinerary, packingList, memos, shoppingList, transInput, transResult, showUndo, totalAmount, handleLogin, saveData, addEvent, addPackingCat, addPackingItem, addShopItem, addMemo, addNoteItem, confirmDelete, undoDelete, uploadPhoto, translateText, openGoogleTranslateApp, speak, openMap, openGuide, openFile };
             }
         }).mount('#app');
     </script>
